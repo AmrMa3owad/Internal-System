@@ -90,6 +90,18 @@ update('Clients', clientA.ClientID, { AssignedTo: lawyer.UserID }, clientRow.Ver
 const assistantRow = fn('mpDbGetById_')('Users', assistant.UserID, false);
 update('Users', assistant.UserID, { Language: 'AR' }, assistantRow.Version, ownerId);
 
+// External referral partners (fictional): one firm handles a case fully, another shares a case with our team.
+const alex = insert('ExternalPartners', { Name: 'Alexandria Legal Group', PartnerType: 'FIRM', ContactPerson: 'Sherif Kamal', Phone: '+203555010101', City: 'Alexandria', PracticeAreas: 'Maritime, commercial', FullShareRate: 20, SharedShareRate: 35 }, ownerId);
+const tanta = insert('ExternalPartners', { Name: 'Hesham Fawzy', PartnerType: 'LAWYER', Phone: '+201221112233', City: 'Tanta', PracticeAreas: 'Criminal hearings', FullShareRate: 15, SharedShareRate: 30 }, ownerId);
+const labourCase = fn('mpRows_')('Cases').records.filter((item) => item.CaseTitle === 'Unfair dismissal claim')[0];
+const sharedRef = insert('Referrals', { PartnerID: tanta.PartnerID, CaseID: case1.CaseID, Scope: 'SHARED', ExternalWork: 'COURT_HEARINGS', ReferredAt: cairo(-20) }, ownerId);
+insert('ReferralWork', { ReferralID: sharedRef.ReferralID, Title: 'Filed the lawsuit at the court registry', WorkDate: cairo(-18), Fee: 750, DoneBy: assistant.UserID }, ownerId);
+insert('ReferralWork', { ReferralID: sharedRef.ReferralID, Title: 'Notarised power of attorney', WorkDate: cairo(-15), Fee: 400, DoneBy: lawyer.UserID }, ownerId);
+const sharedNow = fn('mpDbGetById_')('Referrals', sharedRef.ReferralID, false);
+update('Referrals', sharedRef.ReferralID, { FinalProfit: 24000, Status: 'COMPLETED' }, sharedNow.Version, ownerId);
+insert('Referrals', { PartnerID: alex.PartnerID, CaseID: labourCase.CaseID, Scope: 'FULL', ExternalWork: 'WHOLE_CASE', ReferredAt: cairo(-50) }, ownerId);
+insert('ReferralPayments', { ReferralID: sharedRef.ReferralID, Amount: 5000, PaymentMethod: 'INSTAPAY', PaymentDate: cairo(-3) }, ownerId);
+
 // 'guest' behaves like a personal Gmail visitor Google does not identify: the app shows the email-code sign-in.
 const IDENTITIES = { owner: runtime.ownerEmail, partner: 'partner@demo.test', lawyer: 'lawyer@demo.test', assistant: 'assistant@demo.test', guest: '' };
 const hasIdentity = (name) => Object.prototype.hasOwnProperty.call(IDENTITIES, name);
@@ -102,12 +114,12 @@ function escapeHtml(value) {
 /** ?screen=list:Cases | detail:Cases | form:Cases | edit:Cases | convert | upload | settings  (first active record is used). */
 function startScreen(screen, actor) {
   if (!screen) return null;
-  const [kind, entity] = String(screen).split(':');
-  const first = (name) => fn('mpApiList_')(actor, name, { limit: 1, sortBy: fn('mpUiCreatedField_')(name) }).records[0];
+  const [kind, entity, which] = String(screen).split(':');
+  const first = (name) => fn('mpApiList_')(actor, name, { limit: 1, sortBy: fn('mpUiCreatedField_')(name), sortDirection: which === 'last' ? 'desc' : 'asc' }).records[0];
   if (kind === 'list') return { route: { view: 'list', entity } };
   if (kind === 'settings') return { route: { view: 'settings' } };
   if (kind === 'security') return { route: { view: 'security' } };
-  if (kind === 'detail') return { route: { view: 'detail', entity, id: first(entity)[fn('MP_SCHEMAS')[entity][0]] } };
+  if (kind === 'detail') { const record = first(entity); return record ? { route: { view: 'detail', entity, id: record[fn('MP_SCHEMAS')[entity][0]] } } : { route: { view: 'list', entity } }; }
   if (kind === 'form') return { route: { view: 'list', entity }, form: entity };
   if (kind === 'edit') return { route: { view: 'list', entity }, form: entity, record: first(entity) };
   if (kind === 'convert') return { route: { view: 'list', entity: 'Leads' }, convert: first('Leads') };
@@ -115,7 +127,7 @@ function startScreen(screen, actor) {
   return null;
 }
 
-function renderIndex(as, screen) {
+function renderIndex(as, screen, theme, nav) {
   runtime.setActiveEmail(IDENTITIES[as]);
   let user = null;
   try { user = fn('mpRequireActiveUser_')(); } catch (error) { user = null; }
@@ -133,7 +145,8 @@ function renderIndex(as, screen) {
   if (/<\?/.test(html)) throw new Error('Unrendered scriptlet left in Index.html');
   const bar = '<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:100;background:#fff4e0;color:#a15c07;font:12px system-ui;padding:4px 10px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px rgba(0,0,0,.15)">' +
     'Local preview (demo data) · view as: ' + Object.keys(IDENTITIES).map((role) => role === as ? `<strong>${role}</strong>` : `<a href="/?as=${role}">${role}</a>`).join(' · ') + '</div>';
-  html = html.replace('<head>', '<head><meta name="viewport" content="width=device-width, initial-scale=1">');
+  const prefs = (theme ? "localStorage.setItem('mohamyPlus.theme','" + (theme === 'dark' ? 'dark' : theme === 'auto' ? 'auto' : 'light') + "');" : '') + (nav ? "localStorage.setItem('mohamyPlus.nav','" + (nav === 'collapsed' ? 'collapsed' : 'open') + "');" : '');
+  html = html.replace('<head>', '<head><meta name="viewport" content="width=device-width, initial-scale=1">' + (prefs ? '<script>try{' + prefs + '}catch(e){}</script>' : ''));
   return html.replace('<body>', '<body>' + bar);
 }
 
@@ -164,7 +177,7 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && url.pathname === '/') {
     const as = hasIdentity(url.searchParams.get('as')) ? url.searchParams.get('as') : 'owner';
     try {
-      const html = renderIndex(as, url.searchParams.get('screen'));
+      const html = renderIndex(as, url.searchParams.get('screen'), url.searchParams.get('theme'), url.searchParams.get('nav'));
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(html);
     } catch (error) {

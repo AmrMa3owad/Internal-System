@@ -33,6 +33,12 @@
     globe: [{ c: [12, 12, 10] }, 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
     more: [{ c: [12, 12, 1] }, { c: [19, 12, 1] }, { c: [5, 12, 1] }],
     edit: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z'],
+    external: ['M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6', 'M15 3h6v6', 'M10 14L21 3'],
+    handshake: ['M11 17l2 2a1 1 0 1 0 3-3', 'M14 14l2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4', 'M21 3l1 11h-2', 'M3 3L2 14l6.5 6.5a1 1 0 1 0 3-3', 'M3 4h8'],
+    moon: ['M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'],
+    monitor: [{ r: [2, 3, 20, 14, 2] }, 'M8 21h8', 'M12 17v4'],
+    collapse: ['M11 17l-5-5 5-5', 'M18 17l-5-5 5-5'],
+    sparkle: ['M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z', 'M19 3v4', 'M21 5h-4'],
     shield: ['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'],
     logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
     archive: ['M21 8v13H3V8', 'M1 3h22v5H1z', 'M10 12h4'],
@@ -75,25 +81,35 @@
     Companies: { icon: 'building', title: 'CompanyName', sub: ['ContactPerson', 'Phone'], cols: ['Email'], contact: true,
       essentials: ['CompanyName', 'ContactPerson', 'Phone', 'Email'] },
     Users: { icon: 'user', title: 'FullName', sub: ['Email'], cols: ['Role', 'Status', 'LastLogin'], status: 'Status',
-      essentials: ['FullName', 'Email', 'Role', 'Language'] }
+      essentials: ['FullName', 'Email', 'Role', 'Language'] },
+    ExternalPartners: { icon: 'handshake', title: 'Name', sub: ['FirmName', 'City', 'Phone'], cols: ['PartnerType', 'FullShareRate', 'SharedShareRate', 'Status'], status: 'Status', contact: true,
+      essentials: ['Name', 'PartnerType', 'FirmName', 'Phone', 'Email', 'City', 'FullShareRate', 'SharedShareRate'] },
+    Referrals: { icon: 'external', tile: 'lead', sub: ['CaseID', 'ExternalWork', 'Scope'], cols: ['Status', 'SharePercent', 'Balance'], status: 'Status',
+      essentials: ['PartnerID', 'CaseID', 'Scope', 'ExternalWork', 'SharePercent', 'ReferredAt'] },
+    ReferralWork: { icon: 'task', tile: 'task', title: 'Title', sub: ['ReferralID', 'DoneBy'], cols: ['WorkDate', 'Fee'],
+      essentials: ['ReferralID', 'Title', 'WorkDate', 'DoneBy', 'Fee'] },
+    ReferralPayments: { icon: 'wallet', sub: ['ReferralID', 'PaymentMethod'], cols: ['PaymentDate'],
+      essentials: ['ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod'] }
   };
   /** Fields that only make sense in some situations. */
   var SHOW_IF = { CompanyID: function (values) { return values.ClientType === 'COMPANY'; } };
   var NAV = [
     ['home'],
     ['Leads', 'Clients', 'Cases'],
+    ['Referrals', 'ExternalPartners'],
     ['FollowUps', 'Consultations'],
     ['Transactions', 'Documents'],
     ['more', 'Companies', 'Users', 'security', 'settings']
   ];
-  var NEW_MENU = ['Leads', 'Clients', 'Cases', 'FollowUps', 'Consultations', 'Transactions', 'Documents'];
+  var NEW_MENU = ['Leads', 'Clients', 'Cases', 'Referrals', 'FollowUps', 'Consultations', 'Transactions', 'Documents', 'ExternalPartners'];
   var DATETIME_FIELDS = ['CreatedAt', 'UpdatedAt', 'ArchivedAt', 'ClosedAt', 'CompletedAt', 'LastLogin', 'UploadedAt', 'Timestamp', 'ConsultationDate', 'PaymentDate', 'LastContactAt', 'NextFollowUpAt', 'AddedAt'];
-  var DATE_FIELDS = ['StartDate', 'Deadline', 'DueDate'];
-  var MONEY_FIELDS = ['AgreedFee', 'TotalPaid', 'OutstandingBalance', 'Fee', 'Amount'];
+  var DATE_FIELDS = ['StartDate', 'Deadline', 'DueDate', 'ReferredAt', 'WorkDate'];
+  var MONEY_FIELDS = ['AgreedFee', 'TotalPaid', 'OutstandingBalance', 'Fee', 'Amount', 'FinalProfit', 'ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance'];
+  var PERCENT_FIELDS = ['SharePercent', 'FullShareRate', 'SharedShareRate'];
   var NEVER_SHOW = ['IsArchived', 'ArchivedAt', 'Version', 'DriveFileID', 'CreatedAt', 'UpdatedAt', 'IsPaid'];
-  var PILL_FIELDS = ['Status', 'PaymentStatus', 'Priority', 'Type', 'EntityType', 'ConfidentialityLevel', 'Role', 'Language', 'ClientType', 'Source', 'PracticeArea', 'PaymentMethod'];
+  var PILL_FIELDS = ['Status', 'PaymentStatus', 'Priority', 'Type', 'EntityType', 'ConfidentialityLevel', 'Role', 'Language', 'ClientType', 'Source', 'PracticeArea', 'PaymentMethod', 'Scope', 'ExternalWork', 'PartnerType'];
   var TONES = {
-    ok: ['COMPLETED', 'PAID', 'ACTIVE', 'CONVERTED', 'QUALIFIED', 'INCOME', 'STANDARD'],
+    ok: ['COMPLETED', 'PAID', 'ACTIVE', 'CONVERTED', 'QUALIFIED', 'INCOME', 'STANDARD', 'SETTLED'],
     danger: ['LOST', 'CANCELLED', 'NO_SHOW', 'URGENT', 'INACTIVE', 'UNPAID', 'RESTRICTED', 'NOT_QUALIFIED', 'EXPENSE'],
     warn: ['HIGH', 'PARTIALLY_PAID', 'AWAITING_CLIENT', 'AWAITING_EXTERNAL_ACTION', 'AWAITING_RESPONSE', 'DOCUMENTS_REQUIRED', 'CONFIDENTIAL', 'NEGOTIATION', 'PROPOSAL_SENT'],
     info: ['NEW', 'OPEN', 'SCHEDULED', 'IN_PROGRESS', 'INITIAL_REVIEW', 'UNDER_PREPARATION', 'CONTACTED', 'CONSULTATION_SCHEDULED']
@@ -146,10 +162,56 @@
     document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
     var toggle = clear($('lang-toggle'));
     toggle.appendChild(icon('globe'));
-    toggle.appendChild(document.createTextNode(t('languageToggle')));
+    toggle.appendChild(h('span', { class: 'label', text: t('languageToggle') }));
+    toggle.title = t('languageToggle');
+    renderThemeSwitch();
+    renderCollapseToggle();
     $('global-search').placeholder = t('searchEverything');
+    syncSearchDirection();
     renderMe();
     renderNewMenu();
+  }
+
+  // ------------------------------------------------------------ Theme & menu width
+  // Light, Dark, or Auto (follows the device). Saved per browser; applied in Index.html before paint.
+  var THEMES = [['light', 'sun', 'themeLight'], ['dark', 'moon', 'themeDark'], ['auto', 'monitor', 'themeAuto']];
+  function themePref() { return document.documentElement.getAttribute('data-theme-pref') || 'auto'; }
+  function resolveTheme(pref) {
+    var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return pref === 'dark' || (pref === 'auto' && systemDark) ? 'dark' : 'light';
+  }
+  function setTheme(pref) {
+    try { window.localStorage.setItem('mohamyPlus.theme', pref); } catch (e) { /* storage blocked: theme lasts this visit */ }
+    document.documentElement.setAttribute('data-theme-pref', pref);
+    document.documentElement.setAttribute('data-theme', resolveTheme(pref));
+    renderThemeSwitch();
+  }
+  /** Empty search follows the page direction (so the placeholder sits correctly); typed text follows its own language. */
+  function syncSearchDirection() {
+    var input = $('global-search');
+    if (input) input.dir = input.value ? 'auto' : (state.lang === 'ar' ? 'rtl' : 'ltr');
+  }
+  function renderThemeSwitch() {
+    var holder = $('theme-switch');
+    if (!holder) return;
+    clear(holder);
+    THEMES.forEach(function (theme) {
+      var on = themePref() === theme[0];
+      holder.appendChild(h('button', { type: 'button', class: on ? 'on' : '', title: theme[0] === 'auto' ? t('themeAutoHint') : t(theme[2]), 'aria-label': t(theme[2]), 'aria-pressed': on ? 'true' : 'false', onclick: function () { setTheme(theme[0]); } }, icon(theme[1])));
+    });
+  }
+  function setCollapsed(collapsed) {
+    if (collapsed) document.documentElement.setAttribute('data-nav', 'collapsed'); else document.documentElement.removeAttribute('data-nav');
+    try { window.localStorage.setItem('mohamyPlus.nav', collapsed ? 'collapsed' : 'open'); } catch (e) { /* ignore */ }
+    renderCollapseToggle();
+  }
+  function renderCollapseToggle() {
+    var button = $('collapse-toggle');
+    if (!button) return;
+    var collapsed = document.documentElement.getAttribute('data-nav') === 'collapsed';
+    clear(button).appendChild(icon('collapse', 'flip'));
+    button.title = t(collapsed ? 'expandMenu' : 'collapseMenu');
+    button.setAttribute('aria-label', button.title);
   }
 
   // ------------------------------------------------------------ Helpers
@@ -307,12 +369,16 @@
     if (entity === 'Documents' && field === 'EntityID') return DOC_TARGETS[record.EntityType];
     var meta = fieldMeta(entity, field);
     if (meta && meta.ref) return meta.ref;
+    var refs = (state.boot && state.boot.references && state.boot.references[entity]) || {};
+    if (refs[field]) return refs[field];
     return { ConvertedClientID: 'Clients', CreatedFromLeadID: 'Leads', RecordedBy: 'Users', UploadedBy: 'Users', AssignedTo: 'Users', AssignedLawyer: 'Users' }[field] || null;
   }
   function recordId(entity, record) { return record[formMeta(entity).idField]; }
-  function recordLabel(entity, record) {
+  function recordLabel(entity, record, labels) {
     if (entity === 'Consultations') return t('consultationOn', { d: friendlyDate(record.ConsultationDate, true) });
     if (entity === 'Transactions') return enumLabel(record.Type || '') + ' · ' + money(record.Amount);
+    if (entity === 'Referrals') return t('referralTo', { x: (labels && labels[record.PartnerID]) || t('partner') });
+    if (entity === 'ReferralPayments') return t('paymentOf', { x: money(record.Amount) });
     return record[formMeta(entity).labelField] || recordId(entity, record);
   }
   function userName(id) {
@@ -330,6 +396,7 @@
     var target = refTarget(entity, field, record);
     if (target) return (labels && labels[value]) || (target === 'Users' && userName(value)) || '';
     if (MONEY_FIELDS.indexOf(field) !== -1) return money(value);
+    if (PERCENT_FIELDS.indexOf(field) !== -1) return Number(value) + '%';
     if (DATE_FIELDS.indexOf(field) !== -1 || DATETIME_FIELDS.indexOf(field) !== -1) return friendlyDate(value, DATETIME_FIELDS.indexOf(field) !== -1);
     if (PILL_FIELDS.indexOf(field) !== -1) return enumLabel(value);
     return String(value);
@@ -353,6 +420,7 @@
       return detailLink(target, value, label);
     }
     if (MONEY_FIELDS.indexOf(field) !== -1) return h('span', { text: money(value) });
+    if (PERCENT_FIELDS.indexOf(field) !== -1) return h('span', { dir: 'ltr', text: Number(value) + '%' });
     if (field === 'DueDate' || field === 'Deadline' || field === 'NextFollowUpAt') return dueChip(value, field === 'NextFollowUpAt');
     if (DATE_FIELDS.indexOf(field) !== -1 || DATETIME_FIELDS.indexOf(field) !== -1) return h('span', { dir: 'auto', text: friendlyDate(value, DATETIME_FIELDS.indexOf(field) !== -1) });
     if (value === true || value === false) return value ? t('yes') : t('no');
@@ -369,7 +437,21 @@
     setTimeout(function () { el.remove(); }, isError ? 7000 : 3200);
   }
   function content() { return clear($('content')); }
-  function loading() { append(content(), h('div', { class: 'loading', text: t('loading') })); }
+  /** Shimmering placeholder in the shape of the content that is coming. */
+  function skeleton(kind) {
+    var wrap = h('div', { class: 'skeleton-wrap', 'aria-busy': 'true', 'aria-label': t('loading') });
+    if (kind === 'rows') {
+      for (var i = 0; i < 6; i += 1) wrap.appendChild(h('div', { class: 'skeleton block' }));
+      return wrap;
+    }
+    wrap.appendChild(h('div', { class: 'skeleton block', style: 'height:120px' }));
+    wrap.appendChild(h('div', { class: 'skeleton mid' }));
+    wrap.appendChild(h('div', { class: 'skeleton' }));
+    wrap.appendChild(h('div', { class: 'skeleton short' }));
+    wrap.appendChild(h('div', { class: 'skeleton block', style: 'height:180px' }));
+    return wrap;
+  }
+  function loading() { append(content(), skeleton()); }
   function showError(error) { append(content(), h('div', { class: 'alert danger', text: errorMessage(error) })); }
   function pageHead(title, sub, actions, back) {
     return h('div', { class: 'page-head' },
@@ -427,7 +509,7 @@
           ((route.view === 'list' || route.view === 'detail') && route.entity === item);
         var iconName = item === 'home' ? 'home' : item === 'settings' ? 'sliders' : item === 'security' ? 'shield' : ENTITY_UI[item].icon;
         var label = item === 'home' ? t('navHome') : item === 'settings' ? t('navSettings') : item === 'security' ? t('navSecurity') : entityTitle(item);
-        nav.appendChild(h('a', { class: active ? 'active' : '', onclick: function () {
+        nav.appendChild(h('a', { class: active ? 'active' : '', title: label, onclick: function () {
           state.stack = [];
           navigate(item === 'home' || item === 'settings' || item === 'security' ? { view: item } : { view: 'list', entity: item }, true);
         } }, icon(iconName), h('span', { text: label })));
@@ -473,7 +555,7 @@
       var alertBox = h('div');
       var fail = function (error) { clear(alertBox).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); };
       var card = h('div', { class: 'signin-card' },
-        h('div', { class: 'signin-brand' }, h('div', { class: 'brand-mark', dir: 'ltr' }, 'M', h('span', { text: '+' })), h('span', { class: 'signin-name', text: document.title || 'Mohamy Plus' })));
+        h('div', { class: 'signin-brand' }, h('div', { class: 'brand-mark', dir: 'ltr' }, $('brand-mark') ? $('brand-mark').firstElementChild.cloneNode(true) : null), h('span', { class: 'signin-name', text: document.title || 'Mohamy Plus' })));
       if (which === 'email') {
         var input = h('input', { class: 'input signin-input', type: 'email', dir: 'ltr', autocomplete: 'email', placeholder: 'name@gmail.com', value: email });
         var send = h('button', { class: 'btn primary signin-button', type: 'submit', text: t('sendCode') });
@@ -567,7 +649,7 @@
           box.appendChild(h('div', { class: 'search-group', text: entityTitle(group.entity) }));
           group.records.forEach(function (record) {
             var item = { entity: group.entity, id: recordId(group.entity, record) };
-            var name = recordLabel(group.entity, record);
+            var name = recordLabel(group.entity, record, group.labels);
             item.el = h('button', { class: 'search-item', type: 'button', onclick: function () { open(item); } },
               ENTITY_UI[group.entity].title === 'FullName' ? avatar(name, 'sm') : h('span', { class: 'tile-icon', style: 'width:28px;height:28px;border-radius:8px' }, icon(ENTITY_UI[group.entity].icon)),
               h('span', { style: 'min-width:0' }, h('div', { dir: 'auto', style: 'font-weight:500', text: name }), h('div', { class: 'muted', style: 'font-size:12.5px' }, joinParts(subParts(group.entity, record, group.labels)))));
@@ -579,7 +661,7 @@
         highlight(0);
       }).catch(function (error) { clear(box).appendChild(h('div', { class: 'search-empty', text: errorMessage(error) })); box.hidden = false; });
     }
-    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 220); });
+    input.addEventListener('input', function () { syncSearchDirection(); clearTimeout(timer); timer = setTimeout(run, 220); });
     input.addEventListener('focus', function () { if (items.length && input.value.trim().length >= 2) box.hidden = false; });
     input.addEventListener('keydown', function (event) {
       if (event.key === 'ArrowDown') { event.preventDefault(); highlight(Math.min(items.length - 1, active + 1)); }
@@ -631,8 +713,12 @@
 
   function showHome() {
     var root = content();
-    root.appendChild(pageHead(greeting(), longToday()));
-    var body = h('div', null, h('div', { class: 'loading', text: t('loading') }));
+    var summary = h('div', { class: 'welcome-summary' }, '\u00a0');
+    root.appendChild(h('section', { class: 'welcome' }, h('div', { class: 'welcome-orb', 'aria-hidden': 'true' }),
+      h('div', { class: 'welcome-eyebrow', text: longToday() }),
+      h('h1', { class: 'welcome-title', text: greeting() }),
+      summary));
+    var body = h('div', null, skeleton());
     root.appendChild(body);
     fetchView('home', 'apiGetDashboard', [], function (data) {
       state.today = data.today || state.today;
@@ -692,6 +778,8 @@
 
       var feedCard = h('div', { class: 'card' });
       function drawFeed() {
+        var counts = collect(scope.value === 'mine');
+        summary.textContent = counts.now.length ? t('daySummary', { n: counts.now.length }) : t('daySummaryClear');
         clear(feedCard);
         var lists = collect(scope.value === 'mine');
         var head = h('div', { class: 'card-title' }, h('span', { text: t('yourDay') }), h('span', { class: 'spacer' }));
@@ -722,9 +810,11 @@
       drawFeed();
 
       var statCards = {};
+      var STAT_ICONS = { cases: ['briefcase', 'case'], tasks: ['task', 'task'], leads: ['inbox', 'lead'], consults: ['calendar', 'meet'], income: ['wallet', 'gold'], outstanding: ['wallet', 'gold'], referrals: ['external', 'gold'] };
       var makeStat = function (key, label, value, sub, alert, onclick, isMoney) {
+        var look = STAT_ICONS[key] || ['sparkle', 'gold'];
         statCards[key] = h('div', { class: 'card stat', onclick: onclick },
-          h('div', { class: 'stat-label', text: label }),
+          h('div', { class: 'stat-head' }, h('div', { class: 'stat-label', text: label }), h('span', { class: 'tile-icon ' + look[1] }, icon(look[0]))),
           h('div', { class: 'stat-value' + (isMoney ? ' money' : ''), text: String(value) }),
           sub ? h('div', { class: 'stat-sub' + (alert ? ' is-alert' : ''), text: sub }) : null);
       };
@@ -735,6 +825,9 @@
       if (s.finance) {
         makeStat('income', t('incomeThisMonth'), money(s.finance.incomeThisMonth), t('expenses', { x: money(s.finance.expenseThisMonth) }), false, function () { navigate({ view: 'list', entity: 'Transactions' }); }, true);
         makeStat('outstanding', t('outstanding'), money(s.finance.outstanding), t('acrossOpen'), false, function () { navigate({ view: 'list', entity: 'Cases' }); }, true);
+      }
+      if (s.referrals && s.referrals.owed !== undefined) {
+        makeStat('referrals', t('owedByPartners'), money(s.referrals.owed), t('activeReferralsN', { n: s.referrals.active }), false, function () { navigate({ view: 'list', entity: 'Referrals' }); }, true);
       }
       var statsBlock = function (keys, wide) {
         var cards = keys.filter(function (key) { return statCards[key]; }).map(function (key) { return statCards[key]; });
@@ -788,7 +881,9 @@
       var side = h('div', { class: 'side-stack' });
       if (senior) {
         // Owners and partners: the firm at a glance first.
-        append(body, statsBlock(['cases', 'tasks', 'leads', 'consults', 'income', 'outstanding'], true));
+        // Two balanced rows: the work, then the money.
+        append(body, statsBlock(['cases', 'tasks', 'leads', 'consults'], true));
+        append(body, statsBlock(['income', 'outstanding', 'referrals'], true));
         append(side, [quickActions(), pipelineCard()]);
       } else if (role === 'LAWYER') {
         // Lawyers: their own cases and deadlines.
@@ -819,7 +914,7 @@
     var template = rowTemplate(entity, cols);
     return records.map(function (record) {
       var id = recordId(entity, record);
-      var title = recordLabel(entity, record);
+      var title = recordLabel(entity, record, labels);
       var lead = h('div', { class: 'lead-cell' });
       if (options.selection) {
         var box = h('input', { type: 'checkbox', checked: !!options.selection[id], onclick: function (event) { event.stopPropagation(); } });
@@ -831,11 +926,11 @@
         lead.appendChild(box);
       }
       if (entity === 'FollowUps' && record.Status === 'OPEN' && can('FollowUps', 'update') && record.IsArchived !== true) lead.appendChild(doneButton(record, options.onChange));
-      else if (ui.title === 'FullName' || ui.title === 'CompanyName') lead.appendChild(avatar(title));
+      else if (ui.title === 'FullName' || ui.title === 'CompanyName' || ui.title === 'Name') lead.appendChild(avatar(title));
       else lead.appendChild(h('span', { class: 'tile-icon ' + (ui.tile || '') }, icon(ui.icon)));
       lead.appendChild(h('div', { style: 'min-width:0' },
         h('div', { class: 'primary', dir: 'auto' }, title, record.IsArchived === true ? h('span', { class: 'pill plain', style: 'margin-inline-start:8px', text: t('archived') }) : null),
-        h('div', { class: 'secondary' }, joinParts(subParts(entity, record, labels)))));
+        h('div', { class: 'secondary' }, options.handling && options.handling[id] ? handlingPill(options.handling[id], true) : null, joinParts(subParts(entity, record, labels)))));
       var row = h('div', { class: 'row' + (options.selection && options.selection[id] ? ' selected' : ''), style: 'grid-template-columns:' + template, onclick: function () { navigate({ view: 'detail', entity: entity, id: id }); } },
         lead,
         cols.map(function (column) { return h('div', { class: 'cell optional' + (MONEY_FIELDS.indexOf(column) !== -1 ? ' num' : '') }, formatValue(entity, column, record, labels)); }),
@@ -844,10 +939,17 @@
     });
   }
 
+  /** "External · Firm X" (they handle everything) or "Shared · Firm X" (our team does part). */
+  function handlingPill(items, leading) {
+    var first = items[0];
+    var text = t(first.scope === 'SHARED' ? 'sharedWith' : 'handledExternally', { x: first.partner || t('partner') }) + (items.length > 1 ? ' +' + (items.length - 1) : '');
+    return h('span', { class: 'pill plain ' + (first.scope === 'SHARED' ? 'warn' : 'info'), style: leading ? 'margin-inline-end:8px;font-size:11.5px;padding:1px 8px' : '', text: text });
+  }
+
   function showList(route) {
     var entity = route.entity;
     var ui = ENTITY_UI[entity];
-    var listState = { query: route.query || '', filters: Object.assign({}, route.filters || {}), offset: 0, includeArchived: false, records: [], labels: {} };
+    var listState = { query: route.query || '', filters: Object.assign({}, route.filters || {}), offset: 0, includeArchived: false, records: [], labels: {}, handling: {}, handlingFilter: route.handling || '' };
     var selectable = canAssign(entity);
     var selection = {};
     var root = content();
@@ -890,6 +992,20 @@
       drawChips();
       toolbar.appendChild(chips);
     }
+    if (entity === 'Cases' || entity === 'Clients') {
+      // Who handles it: our team, or an external lawyer/firm we referred it to.
+      var handlingChips = h('div', { class: 'chips' });
+      var drawHandling = function () {
+        clear(handlingChips);
+        [['', t('everyone')], ['internal', t('internal')], ['external', t('external')]].forEach(function (pair) {
+          handlingChips.appendChild(h('button', { type: 'button', class: 'chip' + (listState.handlingFilter === pair[0] ? ' on' : ''), text: pair[1], onclick: function () {
+            listState.handlingFilter = pair[0]; drawHandling(); reset();
+          } }));
+        });
+      };
+      drawHandling();
+      toolbar.appendChild(handlingChips);
+    }
     if (isSenior()) {
       var archived = h('input', { type: 'checkbox', onchange: function () { listState.includeArchived = archived.checked; reset(); } });
       toolbar.appendChild(h('label', { class: 'toggle-link' }, archived, t('showArchived')));
@@ -924,16 +1040,17 @@
     var holder = h('div');
     root.appendChild(holder);
 
-    function reset() { listState.offset = 0; listState.records = []; listState.labels = {}; load(); }
+    function reset() { listState.offset = 0; listState.records = []; listState.labels = {}; listState.handling = {}; load(); }
     function load() {
       updateBulk();
-      if (!listState.records.length) clear(holder).appendChild(h('div', { class: 'loading', text: t('loading') }));
+      if (!listState.records.length) clear(holder).appendChild(skeleton('rows'));
       call('apiListView', entity, {
         query: listState.query, filters: listState.filters, offset: listState.offset, limit: PAGE_SIZE,
-        includeArchived: listState.includeArchived, sortBy: formMeta(entity).createdField, sortDirection: 'desc'
+        includeArchived: listState.includeArchived, sortBy: formMeta(entity).createdField, sortDirection: 'desc', handling: listState.handlingFilter
       }).then(function (result) {
         listState.records = listState.records.concat(result.records);
         Object.assign(listState.labels, result.labels || {});
+        Object.assign(listState.handling, result.handling || {});
         countLine.textContent = t('countOf', { n: result.total });
         clear(holder);
         if (!listState.records.length) {
@@ -944,7 +1061,7 @@
           return;
         }
         var rows = h('div', { class: 'rows' }, recordRows(entity, listState.records, listState.labels, {
-          selection: selectable ? selection : null, onSelect: updateBulk, onChange: reset
+          selection: selectable ? selection : null, onSelect: updateBulk, onChange: reset, handling: listState.handling
         }));
         if (listState.records.length < result.total) {
           rows.appendChild(h('div', { class: 'list-foot' }, t('showingOf', { n: listState.records.length, total: result.total }),
@@ -1031,6 +1148,26 @@
       h('div', { class: balance < 0 ? 'muted' : (balance > 0 ? 'muted' : ''), style: 'font-size:13px', text: balance > 0 ? t('remaining', { x: money(balance), p: pct }) : balance < 0 ? t('overpaid', { x: money(-balance) }) : t('fullyPaid') }));
   }
 
+  /** What the partner owes us: share of their final profit plus our work fees, minus what they have paid. */
+  function referralMoneyCard(record) {
+    if (record.TotalDue === undefined) return null;
+    var due = Number(record.TotalDue || 0);
+    var received = Number(record.TotalReceived || 0);
+    var pct = due > 0 ? Math.max(0, Math.min(100, Math.round(100 * received / due))) : 0;
+    var hasProfit = record.FinalProfit !== '' && record.FinalProfit !== null && record.FinalProfit !== undefined;
+    var line = function (label, value, strong) {
+      return h('div', { class: 'money-row', style: 'padding:4px 0' }, h('span', { class: strong ? '' : 'muted', text: label }), h('span', { style: strong ? 'font-weight:600' : '', text: value }));
+    };
+    return h('div', { class: 'card money-card' },
+      h('div', { class: 'money-row' }, h('div', null, h('div', { class: 'fact-label', text: t('totalOwed') }), h('div', { class: 'money-big', text: money(due) })),
+        h('div', { style: 'text-align:end' }, h('div', { class: 'fact-label', text: t('receivedSoFar') }), h('div', { style: 'font-weight:500', text: money(received) }))),
+      h('div', { class: 'progress' }, h('span', { style: 'width:' + pct + '%' })),
+      hasProfit ? line(t('theirProfit'), money(record.FinalProfit)) : h('div', { class: 'faint', style: 'font-size:13px;padding:4px 0', text: t('profitPending') }),
+      line(t('ourShareOf', { p: record.SharePercent === '' || record.SharePercent === undefined ? '—' : Number(record.SharePercent) }), money(record.ExpectedShare)),
+      line(t('ourWorkFees'), money(record.AdminFeesTotal)),
+      line(due > 0 && Number(record.Balance) <= 0 ? t('fullyPaid') : t('stillOwed'), money(Math.max(Number(record.Balance || 0), 0)), true));
+  }
+
   function showDetail(route) {
     var entity = route.entity;
     var ui = ENTITY_UI[entity];
@@ -1040,7 +1177,7 @@
       var labels = data.labels || {};
       var reload = function () { navigate({ view: 'detail', entity: entity, id: route.id, tab: state.current.tab }, true); };
       var root = content();
-      var title = recordLabel(entity, record);
+      var title = recordLabel(entity, record, labels);
 
       // Hero
       var actions = [];
@@ -1050,6 +1187,12 @@
       }
       if (ui.contact && !blank(record.Email)) actions.push(h('a', { class: 'btn', href: 'mailto:' + record.Email }, icon('mail'), t('email')));
       if (entity === 'Documents') actions.push(h('button', { class: 'btn primary', type: 'button', onclick: function () { downloadDocument(record); } }, icon('download'), t('download')));
+      if (entity === 'Cases' && can('Referrals', 'create') && record.IsArchived !== true) {
+        actions.push(h('button', { class: 'btn', type: 'button', onclick: function () {
+          var presetLabels = Object.assign({}, labels); presetLabels[record.CaseID] = record.CaseTitle;
+          startCreate('Referrals', { CaseID: record.CaseID }, presetLabels, reload);
+        } }, icon('external'), t('referExternally')));
+      }
       if (entity === 'Leads' && can('LeadConversion', 'create') && ['CONVERTED', 'LOST', 'NOT_QUALIFIED'].indexOf(record.Status) === -1 && record.IsArchived !== true) {
         actions.push(h('button', { class: 'btn gold', type: 'button', onclick: function () { openConvert(record); } }, icon('swap'), t('convertButton')));
       }
@@ -1058,8 +1201,10 @@
         var overflow = h('div', { class: 'menu', hidden: true }, h('button', { type: 'button', class: 'danger', onclick: function () { overflow.hidden = true; confirmArchive(entity, record); } }, icon('archive'), t('archive')));
         actions.push(h('div', { style: 'position:relative' }, h('button', { class: 'btn icon-only', type: 'button', title: t('more'), onclick: function (event) { event.stopPropagation(); var open = overflow.hidden; closeMenus(); overflow.hidden = !open; } }, icon('more')), overflow));
       }
-      var leading = ui.title === 'FullName' || ui.title === 'CompanyName' ? avatar(title, 'lg') : h('span', { class: 'tile-icon ' + (ui.tile || ''), style: 'width:56px;height:56px;border-radius:16px' }, icon(ui.icon));
-      var metaLine = h('div', { class: 'meta-line' }, statusControl(entity, record, reload), h('span', null, joinParts([entitySingular(entity)].concat(subParts(entity, record, labels)))));
+      var leading = ui.title === 'FullName' || ui.title === 'CompanyName' || ui.title === 'Name' ? avatar(title, 'lg') : h('span', { class: 'tile-icon ' + (ui.tile || ''), style: 'width:56px;height:56px;border-radius:16px' }, icon(ui.icon));
+      var activeReferrals = ((data.related || {}).Referrals || { records: [] }).records.filter(function (item) { return item.Status !== 'CANCELLED' && item.IsArchived !== true; })
+        .map(function (item) { return { scope: item.Scope, partner: labels[item.PartnerID] || '' }; });
+      var metaLine = h('div', { class: 'meta-line' }, statusControl(entity, record, reload), activeReferrals.length ? handlingPill(activeReferrals) : null, h('span', null, joinParts([entitySingular(entity)].concat(subParts(entity, record, labels)))));
       root.appendChild(h('a', { class: 'back-link', style: 'margin-top:14px', onclick: function () { if (state.stack.length) goBack(); else navigate({ view: 'list', entity: entity }, true); } }, icon('back', 'flip'), state.stack.length ? t('back') : entityTitle(entity)));
       root.appendChild(h('div', { class: 'card hero' }, leading, h('div', { class: 'titles' },
         h('h1', { dir: 'auto', text: title }), metaLine,
@@ -1091,12 +1236,14 @@
       function overview() {
         var main = h('div');
         if (entity === 'Cases') append(main, moneyCard(record));
+        if (entity === 'Referrals') append(main, referralMoneyCard(record));
         var facts = h('div', { class: 'facts' });
         var shown = 0;
         var empty = 0;
         Object.keys(record).forEach(function (field) {
           if (NEVER_SHOW.indexOf(field) !== -1 || field === formMeta(entity).idField || field === ui.title || field === ui.status) return;
           if (entity === 'Cases' && ['AgreedFee', 'TotalPaid', 'OutstandingBalance'].indexOf(field) !== -1 && Number(record.AgreedFee) > 0) return;
+          if (entity === 'Referrals' && ['ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance', 'FinalProfit'].indexOf(field) !== -1 && record.TotalDue !== undefined) return;
           if (blank(record[field])) { if (fieldMeta(entity, field)) empty += 1; return; }
           var fm = fieldMeta(entity, field);
           shown += 1;
@@ -1271,7 +1418,7 @@
     }
     var inputType = { number: 'number', date: 'date', datetime: 'datetime-local', email: 'email', phone: 'tel' }[type] || 'text';
     var initial = blank(value) ? '' : type === 'date' ? String(value).slice(0, 10) : type === 'datetime' ? String(value).slice(0, 16) : String(value);
-    el = h('input', { class: 'input', type: inputType, step: type === 'number' ? 'any' : null, min: type === 'number' ? '0' : null, dir: inputType === 'text' ? 'auto' : (inputType === 'tel' || inputType === 'email' ? 'ltr' : null), value: initial, disabled: locked });
+    el = h('input', { class: 'input', type: inputType, step: type === 'number' ? 'any' : null, min: type === 'number' ? '0' : null, placeholder: name === 'SharePercent' ? t('partnerDefault') : null, dir: inputType === 'text' ? 'auto' : (inputType === 'tel' || inputType === 'email' ? 'ltr' : null), value: initial, disabled: locked });
     return { el: el, getValue: function () { var v = el.value.trim(); return type === 'number' && v !== '' ? Number(v) : v; } };
   }
 
@@ -1626,8 +1773,13 @@
     [['EN', 'English'], ['AR', 'العربية']].forEach(function (pair) {
       langRow.appendChild(h('button', { class: 'btn' + (state.lang === pair[0].toLowerCase() ? ' on' : ''), type: 'button', text: pair[1], onclick: function () { setLanguage(pair[0]); } }));
     });
+    var themeRow = h('div', { class: 'lang-choice' });
+    THEMES.forEach(function (theme) {
+      themeRow.appendChild(h('button', { class: 'btn' + (themePref() === theme[0] ? ' on' : ''), type: 'button', title: theme[0] === 'auto' ? t('themeAutoHint') : null, onclick: function () { setTheme(theme[0]); showSettings(); } }, icon(theme[1]), t(theme[2])));
+    });
     grid.appendChild(h('div', { class: 'card' }, h('div', { class: 'card-title', text: t('yourPreferences') }),
       h('div', { class: 'fact-label', text: t('language') }), langRow,
+      h('div', { class: 'fact-label', style: 'margin-top:16px', text: t('appearance') }), themeRow,
       h('div', { class: 'fact-label', style: 'margin-top:16px', text: t('remindersTitle') }),
       h('p', { text: t('reminderPersonal') }),
       h('button', { class: 'btn small', type: 'button', onclick: previewReminder }, icon('mail'), t('previewReminder'))));
@@ -1738,6 +1890,14 @@
   $('menu-toggle').addEventListener('click', openDrawer);
   $('scrim').addEventListener('click', closeDrawer);
   $('lang-toggle').addEventListener('click', function () { setLanguage(state.lang === 'ar' ? 'EN' : 'AR'); });
+  $('collapse-toggle').addEventListener('click', function () { setCollapsed(document.documentElement.getAttribute('data-nav') !== 'collapsed'); });
+  if (window.matchMedia) {
+    var darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    var followSystem = function () { if (themePref() === 'auto') document.documentElement.setAttribute('data-theme', resolveTheme('auto')); };
+    if (darkQuery.addEventListener) darkQuery.addEventListener('change', followSystem); else if (darkQuery.addListener) darkQuery.addListener(followSystem);
+  }
+  renderThemeSwitch();
+  renderCollapseToggle();
   window.addEventListener('scroll', function () { document.querySelector('.topbar').classList.toggle('scrolled', window.scrollY > 4); });
   setupSearch();
 

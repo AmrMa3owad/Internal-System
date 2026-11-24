@@ -49,34 +49,46 @@ function mpEscapeHtml_(value) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/** The firm's logo (scales of justice with the M shield), drawn as a vector so it stays sharp. */
+const MP_LOGO_SVG_ = '<svg class="logo" viewBox="0 0 64 58" role="img" aria-label="Mohamy Plus"><g fill="currentColor"><path d="M6 12H27.6L32 15.4L36.4 12H58V14.3H37.2L32 18.5L26.8 14.3H6Z"/><path d="M32 6.3l3.8 3.9-3.8 3.9-3.8-3.9z"/><path d="M10.5 14.3l-6.3 15h1.6l4.7-11.4 4.7 11.4h1.6z"/><path d="M2.9 30.3h15.2c-.6 3.7-3.8 6.2-7.6 6.2s-7-2.5-7.6-6.2z"/><path d="M53.5 14.3l-6.3 15h1.6l4.7-11.4 4.7 11.4h1.6z"/><path d="M45.9 30.3h15.2c-.6 3.7-3.8 6.2-7.6 6.2s-7-2.5-7.6-6.2z"/><path fill-rule="evenodd" d="M19.4 20.2H26.8L32 30.6L37.2 20.2H44.6V22.3L42.6 23.2V45.2L32 52.6L21.4 45.2V23.2L19.4 22.3Z M24.3 24.6L25.9 25.8V43.6L24.3 42.4Z M39.7 24.6L38.1 25.8V43.6L39.7 42.4Z M31.4 37.2H32.6V49.6L32 50.2L31.4 49.6Z"/></g></svg>';
+
 /** seenAs: the account Google reported (blank when Google withholds it), shown to help fix the Users entry. */
 function mpAccessDeniedHtml_(message, seenAs) {
   const account = seenAs
     ? '<p class="who">Signed in as / الحساب الحالي: <b>' + mpEscapeHtml_(seenAs) + '</b></p>'
     : '<p class="who">Google did not share which account you are signed in with. Use your firm Workspace account. / لم تُرسل Google بيانات حسابك. استخدم حساب المكتب.</p>';
   return '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>' +
-    'body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f4f6fa;color:#102a43;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}' +
-    '.card{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(16,42,67,.08);padding:32px;max-width:440px}h1{font-size:20px;margin:0 0 12px}p{color:#486581;line-height:1.5}.who{background:#f4f6fa;border-radius:8px;padding:10px 12px;color:#102a43}' +
-    '</style></head><body><div class="card"><h1>Access denied</h1><p>' + mpEscapeHtml_(message) + '</p>' + account +
+    ':root{color-scheme:light dark}body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:#f3f0e9;color:#111926;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;' +
+    'background-image:radial-gradient(700px 500px at 10% -10%,rgba(201,164,106,.3),transparent 60%),radial-gradient(700px 500px at 100% 0,rgba(99,102,241,.14),transparent 60%)}' +
+    '.card{background:rgba(255,255,255,.8);border:1px solid rgba(23,33,45,.08);border-radius:22px;box-shadow:0 30px 70px -30px rgba(17,25,38,.45);padding:34px;max-width:460px;margin:20px;backdrop-filter:blur(18px)}' +
+    '.mark{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#263552,#0c1220);color:#f6ead3;font:600 16px Georgia,serif;border:1px solid rgba(227,187,117,.5);margin-bottom:20px}.mark svg{width:78%;height:auto;color:#eef0f4}' +
+    'h1{font:600 24px Georgia,"Times New Roman",serif;margin:0 0 10px}p{color:#6f695e;line-height:1.6;margin:0 0 12px}.who{background:rgba(23,33,45,.05);border-radius:12px;padding:10px 12px;color:#111926}' +
+    '@media (prefers-color-scheme:dark){body{background:#060a13;color:#e9eef7;background-image:radial-gradient(700px 500px at 10% -10%,rgba(224,184,114,.16),transparent 60%),radial-gradient(700px 500px at 100% 0,rgba(99,102,241,.26),transparent 60%)}' +
+    '.card{background:rgba(16,23,38,.72);border-color:rgba(148,163,184,.14)}p{color:#96a2b6}.who{background:rgba(148,163,184,.1);color:#e9eef7}}' +
+    '</style></head><body><div class="card"><div class="mark" dir="ltr">' + MP_LOGO_SVG_ + '</div><h1>Access denied</h1><p>' + mpEscapeHtml_(message) + '</p>' + account +
     '<h1 dir="rtl" style="margin-top:20px">تم رفض الوصول</h1><p dir="rtl">لا يمكن التحقق من حسابك أو أنه غير مضاف كمستخدم نشط في محامي بلس. اطلب من المالك إضافتك.</p></div></body></html>';
 }
 
 // --------------------------------------------------------------- Metadata
 
-const MP_UI_LABEL_FIELDS_ = { Users: 'FullName', Leads: 'FullName', Clients: 'FullName', Companies: 'CompanyName', Cases: 'CaseTitle', Consultations: 'ConsultationDate', Transactions: 'Amount', FollowUps: 'Title', Documents: 'FileName' };
+const MP_UI_LABEL_FIELDS_ = { Users: 'FullName', Leads: 'FullName', Clients: 'FullName', Companies: 'CompanyName', Cases: 'CaseTitle', Consultations: 'ConsultationDate', Transactions: 'Amount', FollowUps: 'Title', Documents: 'FileName', ExternalPartners: 'Name', Referrals: 'PartnerID', ReferralWork: 'Title', ReferralPayments: 'Amount' };
 
 const MP_UI_REQUIRED_ = {
   Users: ['FullName', 'Email', 'Role'], Leads: ['FullName', 'Source'], Clients: ['FullName'], Companies: ['CompanyName'],
   Cases: ['CaseTitle', 'ClientID'], Consultations: ['ConsultationDate', 'Duration'],
   Transactions: ['Type', 'Amount', 'PaymentMethod', 'PaymentDate'], FollowUps: ['Title', 'DueDate'],
-  Documents: ['EntityType', 'EntityID']
+  Documents: ['EntityType', 'EntityID'],
+  ExternalPartners: ['Name', 'PartnerType'], Referrals: ['PartnerID', 'CaseID', 'Scope'], ReferralWork: ['ReferralID', 'Title'],
+  ReferralPayments: ['ReferralID', 'Amount', 'PaymentMethod', 'PaymentDate']
 };
 
 /** Defaults the server applies when a field is omitted on create; forms preselect them. */
 const MP_UI_DEFAULTS_ = {
   Users: { Status: 'ACTIVE', Language: 'EN' }, Leads: { ClientType: 'INDIVIDUAL', Priority: 'MEDIUM', Status: 'NEW' }, Clients: { ClientType: 'INDIVIDUAL', Status: 'ACTIVE' },
   Cases: { Priority: 'MEDIUM', Status: 'INITIAL_REVIEW' }, Consultations: { PaymentStatus: 'UNPAID', Status: 'SCHEDULED' },
-  FollowUps: { Priority: 'MEDIUM', Status: 'OPEN' }, Documents: { ConfidentialityLevel: 'CONFIDENTIAL' }
+  FollowUps: { Priority: 'MEDIUM', Status: 'OPEN' }, Documents: { ConfidentialityLevel: 'CONFIDENTIAL' },
+  ExternalPartners: { PartnerType: 'LAWYER', Status: 'ACTIVE' }, Referrals: { Scope: 'FULL', ExternalWork: 'WHOLE_CASE', Status: 'ACTIVE' },
+  ReferralPayments: { PaymentMethod: 'BANK_TRANSFER' }
 };
 
 /** Fields kept out of forms because the server derives them. */
@@ -84,8 +96,8 @@ const MP_UI_DERIVED_ = ['Consultations.IsPaid'];
 
 const MP_UI_TYPES_ = {
   datetime: ['ConsultationDate', 'PaymentDate', 'LastContactAt', 'NextFollowUpAt'],
-  date: ['StartDate', 'Deadline', 'DueDate'],
-  number: ['AgreedFee', 'Fee', 'Amount', 'Duration'],
+  date: ['StartDate', 'Deadline', 'DueDate', 'ReferredAt', 'WorkDate'],
+  number: ['AgreedFee', 'Fee', 'Amount', 'Duration', 'FullShareRate', 'SharedShareRate', 'SharePercent', 'FinalProfit'],
   longtext: ['Description', 'Notes', 'Outcome', 'Address', 'OpposingParties'],
   email: ['Email'],
   phone: ['Phone']
@@ -100,6 +112,9 @@ function mpUiEnumOptions_(actor, entity, field, settings) {
     Consultations: { PaymentStatus: MP_CONFIG.PAYMENT_STATUSES, Status: MP_CONFIG.CONSULTATION_STATUSES },
     Transactions: { Type: MP_CONFIG.TRANSACTION_TYPES, PaymentMethod: MP_CONFIG.PAYMENT_METHODS },
     FollowUps: { Priority: MP_CONFIG.PRIORITIES, Status: MP_CONFIG.FOLLOW_UP_STATUSES },
+    ExternalPartners: { PartnerType: MP_CONFIG.PARTNER_TYPES, Status: MP_CONFIG.PARTNER_STATUSES },
+    Referrals: { Scope: MP_CONFIG.REFERRAL_SCOPES, ExternalWork: MP_CONFIG.REFERRAL_WORK_TYPES, Status: MP_CONFIG.REFERRAL_STATUSES },
+    ReferralPayments: { PaymentMethod: MP_CONFIG.PAYMENT_METHODS },
     Documents: {
       EntityType: MP_CONFIG.DOCUMENT_ENTITY_TYPES,
       ConfidentialityLevel: MP_CONFIG.CONFIDENTIALITY_LEVELS.filter(function(level) { return mpCanViewDocument_(actor.role, { ConfidentialityLevel: level }); })
@@ -150,6 +165,8 @@ function mpApiAssignableUsers_() {
 function mpUiRecordLabel_(entity, record) {
   if (entity === 'Consultations') return 'Consultation ' + String(record.ConsultationDate || '').slice(0, 16).replace('T', ' ');
   if (entity === 'Transactions') return record.Type + ' ' + record.Amount;
+  if (entity === 'Referrals') { const partner = mpDbGetById_('ExternalPartners', record.PartnerID, true); return partner ? mpPlainText_(partner.Name) : 'Referral'; }
+  if (entity === 'ReferralPayments') return 'Payment ' + record.Amount;
   return mpPlainText_(record[MP_UI_LABEL_FIELDS_[entity]] || record[MP_SCHEMAS[entity][0]]);
 }
 
@@ -193,6 +210,7 @@ function mpApiBootstrap_(actor) {
   const me = mpDbGetById_('Users', actor.userId, false);
   profile.language = me && me.Language === 'AR' ? 'AR' : 'EN';
   profile.restricted = mpIsRecordRestricted_(actor);
+  profile.references = MP_REFERENCE_FIELDS;
   profile.signedInWith = actor.via || 'google';
   profile.assignable = MP_CONFIG.ASSIGNABLE_ENTITIES;
   profile.assigneeFields = MP_ASSIGNEE_FIELDS;
@@ -203,14 +221,41 @@ function mpApiBootstrap_(actor) {
 function mpApiListWithLabels_(actor, entity, options) {
   const result = mpApiList_(actor, entity, options);
   result.labels = mpApiLabels_(actor, entity, result.records);
+  if (entity === 'Cases' || entity === 'Clients') result.handling = mpHandlingFor_(entity, result.records);
   return result;
+}
+
+/** Cases/clients handled by an external partner (active, not cancelled referrals). */
+function mpExternallyHandledIds_(entity) {
+  const byCase = mpActiveReferralsByCase_();
+  const ids = {};
+  Object.keys(byCase).forEach(function(caseId) {
+    if (entity === 'Cases') ids[caseId] = true;
+    else byCase[caseId].forEach(function(item) { if (item.clientId) ids[item.clientId] = true; });
+  });
+  return ids;
+}
+
+/** id -> [{ scope, partner, referralId }] so lists can label "External · Firm X". */
+function mpHandlingFor_(entity, records) {
+  const byCase = mpActiveReferralsByCase_();
+  const out = {};
+  records.forEach(function(record) {
+    if (entity === 'Cases') { if (byCase[record.CaseID]) out[record.CaseID] = byCase[record.CaseID]; return; }
+    Object.keys(byCase).forEach(function(caseId) {
+      byCase[caseId].forEach(function(item) { if (item.clientId === record.ClientID) (out[record.ClientID] = out[record.ClientID] || []).push(item); });
+    });
+  });
+  return out;
 }
 
 const MP_UI_RELATED_ = {
   Leads: [['Consultations', 'LeadID'], ['FollowUps', 'LeadID'], ['Documents', 'EntityID', 'LEAD']],
-  Clients: [['Cases', 'ClientID'], ['Consultations', 'ClientID'], ['Transactions', 'ClientID'], ['FollowUps', 'ClientID'], ['Documents', 'EntityID', 'CLIENT']],
+  Clients: [['Cases', 'ClientID'], ['Referrals', 'ClientID'], ['Consultations', 'ClientID'], ['Transactions', 'ClientID'], ['FollowUps', 'ClientID'], ['Documents', 'EntityID', 'CLIENT']],
   Companies: [['Clients', 'CompanyID'], ['Leads', 'CompanyID']],
-  Cases: [['Transactions', 'CaseID'], ['FollowUps', 'CaseID'], ['Documents', 'EntityID', 'CASE']],
+  Cases: [['Referrals', 'CaseID'], ['Transactions', 'CaseID'], ['FollowUps', 'CaseID'], ['Documents', 'EntityID', 'CASE']],
+  ExternalPartners: [['Referrals', 'PartnerID']],
+  Referrals: [['ReferralWork', 'ReferralID'], ['ReferralPayments', 'ReferralID']],
   Consultations: [['Transactions', 'ConsultationID']],
   Users: [['Leads', 'AssignedTo'], ['Clients', 'AssignedTo'], ['Cases', 'AssignedLawyer'], ['Consultations', 'AssignedLawyer'], ['FollowUps', 'AssignedTo']]
 };
@@ -322,6 +367,18 @@ function mpApiDashboard_(actor) {
     out.sections.consultations = { upcoming: upcoming.slice(0, 10), upcomingCount: upcoming.length };
     labelled.push(['Consultations', out.sections.consultations.upcoming]);
   }
+  if (mpCan_(actor.role, 'Referrals', 'read')) {
+    const referrals = active('Referrals').filter(function(item) { return item.Status !== 'CANCELLED'; });
+    out.sections.referrals = {
+      active: referrals.filter(function(item) { return item.Status === 'ACTIVE' || item.Status === 'PROPOSED'; }).length,
+      awaitingPayment: referrals.filter(function(item) { return item.Status === 'COMPLETED'; }).length
+    };
+    if (mpCanSeeFinancials_(actor.role)) {
+      out.sections.referrals.owed = mpRound2_(referrals.reduce(function(total, item) { return total + Math.max(Number(item.Balance || 0), 0); }, 0));
+      out.sections.referrals.receivedThisMonth = mpRound2_(active('ReferralPayments').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; })
+        .reduce(function(total, item) { return total + Number(item.Amount || 0); }, 0));
+    }
+  }
   if (mpCanSeeFinancials_(actor.role)) {
     const transactions = active('Transactions').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; });
     const sum = function(type) { return transactions.filter(function(item) { return item.Type === type; }).reduce(function(total, item) { return total + Number(item.Amount || 0); }, 0); };
@@ -377,7 +434,7 @@ function apiGetDetail(entity, id) {
   return mpApiRespond_(function() { return mpApiDetail_(mpRequireActiveUser_(), entity, id); });
 }
 
-const MP_SEARCH_ENTITIES_ = ['Clients', 'Cases', 'Leads', 'Companies', 'Consultations', 'FollowUps'];
+const MP_SEARCH_ENTITIES_ = ['Clients', 'Cases', 'Leads', 'Companies', 'ExternalPartners', 'Consultations', 'FollowUps'];
 
 /** One search box for the whole app: up to 5 matches per readable entity, scoped like every list. */
 function mpApiSearch_(actor, query) {

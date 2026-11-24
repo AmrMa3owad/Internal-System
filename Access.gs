@@ -53,6 +53,9 @@ function mpAccessScope_(actor) {
   mpRows_('Consultations').records.forEach(function(item) {
     if (item.AssignedLawyer === me || scope.Leads[item.LeadID] || scope.Clients[item.ClientID]) scope.Consultations[item.ConsultationID] = true;
   });
+  // A referral (and its work items and payments) is visible with its case.
+  scope.Referrals = {};
+  mpRows_('Referrals').records.forEach(function(item) { if (scope.Cases[item.CaseID]) scope.Referrals[item.ReferralID] = true; });
   MP_SCOPE_CACHE_[me] = scope;
   return scope;
 }
@@ -74,6 +77,9 @@ function mpRecordInScope_(scope, entity, record) {
       return !!target && !!scope[target][record.EntityID];
     }
     case 'Assignments': return !!(scope[record.EntityType] || {})[record.EntityID];
+    case 'Referrals': return !!scope.Referrals[record.ReferralID];
+    case 'ReferralWork':
+    case 'ReferralPayments': return !!scope.Referrals[record.ReferralID];
     default: return true;
   }
 }

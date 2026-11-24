@@ -79,6 +79,11 @@ def load_configuration(config_file: Path = CONFIG_FILE) -> tuple[dict[str, list[
         "CLIENT_TYPES": _array_values(config, "CLIENT_TYPES"),
         "CLIENT_STATUSES": _array_values(config, "CLIENT_STATUSES"),
         "LANGUAGES": _array_values(config, "LANGUAGES"),
+        "PARTNER_TYPES": _array_values(config, "PARTNER_TYPES"),
+        "PARTNER_STATUSES": _array_values(config, "PARTNER_STATUSES"),
+        "REFERRAL_SCOPES": _array_values(config, "REFERRAL_SCOPES"),
+        "REFERRAL_WORK_TYPES": _array_values(config, "REFERRAL_WORK_TYPES"),
+        "REFERRAL_STATUSES": _array_values(config, "REFERRAL_STATUSES"),
         "PRIORITIES": _array_values(config, "PRIORITIES"),
         "LEAD_SOURCES": _array_values(config, "LEAD_SOURCES"),
         "LEAD_STATUSES": _array_values(config, "LEAD_STATUSES"),
@@ -280,7 +285,7 @@ Excel dropdowns are convenience guidance only. They do **not** replace Apps Scri
 
 1. Upload `Mohamy_Plus_Database_Template.xlsx` to the approved Google Drive account.
 2. In Drive, right-click it and choose **Open with → Google Sheets**. This converts it to a Google Sheet.
-3. Inspect every imported worksheet before use: all thirteen entity sheets must exist, headers must be in row 1, in the exact order shown, and the Settings values must be present. The hidden `ValidationLists` worksheet supports dropdowns and should remain hidden.
+3. Inspect every imported worksheet before use: all seventeen entity sheets must exist, headers must be in row 1, in the exact order shown, and the Settings values must be present. The hidden `ValidationLists` worksheet supports dropdowns and should remain hidden.
 4. Open the converted spreadsheet. Its URL has the form `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`; copy only the value between `/d/` and `/edit`.
 5. In the Apps Script project, run `bindExistingDatabase('SPREADSHEET_ID')`. It validates every required sheet, exact header order, duplicate columns, and required Settings defaults before it stores the ID. An incompatible spreadsheet is not modified or bound. Do not put the ID into source files, HTML, or documentation.
 6. Run `setupDatabase()`. It safely creates missing sheets or headers only in genuinely blank sheets, applies presentation configuration, and provisions an initial owner. It refuses nonblank incompatible schemas and never resets an existing setting value.
@@ -299,7 +304,7 @@ No spreadsheet IDs, credentials, secrets, sample users, fabricated clients, or s
 def generate(write_guide_file: bool = False) -> tuple[Path, Path | None]:
     """Build the workbook. The guide is hand-maintained; only overwrite it on request."""
     schemas, dropdowns, defaults = load_configuration()
-    expected_sheets = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog"]
+    expected_sheets = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog", "ExternalPartners", "Referrals", "ReferralWork", "ReferralPayments"]
     if list(schemas) != expected_sheets:
         raise ValueError("MP_SCHEMAS does not match the required entity order; generation stopped.")
 
@@ -319,6 +324,9 @@ def generate(write_guide_file: bool = False) -> tuple[Path, Path | None]:
         "Transactions": {"Type": "TRANSACTION_TYPES", "PaymentMethod": "PAYMENT_METHODS"},
         "FollowUps": {"Priority": "PRIORITIES", "Status": "FOLLOW_UP_STATUSES"},
         "Documents": {"ConfidentialityLevel": "CONFIDENTIALITY_LEVELS"},
+        "ExternalPartners": {"PartnerType": "PARTNER_TYPES", "Status": "PARTNER_STATUSES"},
+        "Referrals": {"Scope": "REFERRAL_SCOPES", "ExternalWork": "REFERRAL_WORK_TYPES", "Status": "REFERRAL_STATUSES"},
+        "ReferralPayments": {"PaymentMethod": "PAYMENT_METHODS"},
     }
 
     for name, headers in schemas.items():

@@ -57,7 +57,14 @@ window.MP_I18N = {
       allowRetryTitle: 'Let someone try again', allowRetryHelp: 'After 5 code requests in an hour, an email has to wait an hour. Enter it here to let them try again right away.',
       devicesTitle: 'Signed-in devices', devicesHelp: 'People who signed in with an email code. Signing a device out takes effect on its next click.',
       noDevices: 'No devices are signed in with a code.', since: 'Since {d}', until: 'until {d}', inactiveUser: 'Inactive', signOutDevice: 'Sign this device out',
-      deviceSignedOut: 'Device signed out.'
+      deviceSignedOut: 'Device signed out.',
+      partner: 'partner', referralTo: 'Referral · {x}', paymentOf: 'Payment · {x}', internal: 'Internal', external: 'External',
+      handledExternally: 'External · {x}', sharedWith: 'Shared · {x}', referExternally: 'Refer externally', partnerDefault: "Partner's default",
+      owedByPartners: 'Owed by partners', activeReferralsN: '{n} active referrals', totalOwed: 'Total owed to us', receivedSoFar: 'Received',
+      theirProfit: 'Their final profit', ourShareOf: 'Our share ({p}%)', ourWorkFees: 'Our work fees', stillOwed: 'Still owed',
+      profitPending: 'Add their final profit when the work is done to calculate our share.',
+      appearance: 'Appearance', themeLight: 'Light', themeDark: 'Dark', themeAuto: 'Auto', themeAutoHint: 'Auto follows your device', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu',
+      daySummary: '{n} thing(s) need your attention today.', daySummaryClear: 'Nothing urgent today — a calm day ahead.'
     },
     ar: {
       loading: 'جارٍ التحميل…', back: 'رجوع', edit: 'تعديل', archive: 'أرشفة', cancel: 'إلغاء', create: 'حفظ', saveChanges: 'حفظ التغييرات', save: 'حفظ',
@@ -111,19 +118,30 @@ window.MP_I18N = {
       allowRetryTitle: 'السماح بمحاولة جديدة', allowRetryHelp: 'بعد 5 طلبات رمز خلال ساعة يجب على البريد الانتظار ساعة. أدخله هنا للسماح له بالمحاولة فورًا.',
       devicesTitle: 'الأجهزة المسجّلة الدخول', devicesHelp: 'الأشخاص الذين دخلوا برمز البريد. تسجيل خروج جهاز يسري عند نقرته التالية.',
       noDevices: 'لا توجد أجهزة مسجّلة الدخول برمز.', since: 'منذ {d}', until: 'حتى {d}', inactiveUser: 'غير نشط', signOutDevice: 'تسجيل خروج هذا الجهاز',
-      deviceSignedOut: 'تم تسجيل خروج الجهاز.'
+      deviceSignedOut: 'تم تسجيل خروج الجهاز.',
+      partner: 'جهة خارجية', referralTo: 'إحالة · {x}', paymentOf: 'دفعة · {x}', internal: 'داخلي', external: 'خارجي',
+      handledExternally: 'خارجي · {x}', sharedWith: 'مشترك · {x}', referExternally: 'إحالة لجهة خارجية', partnerDefault: 'النسبة الافتراضية للجهة',
+      owedByPartners: 'مستحق لنا لدى الجهات الخارجية', activeReferralsN: '{n} إحالة نشطة', totalOwed: 'إجمالي المستحق لنا', receivedSoFar: 'المستلم',
+      theirProfit: 'صافي ربحهم النهائي', ourShareOf: 'حصتنا ({p}%)', ourWorkFees: 'رسوم أعمالنا', stillOwed: 'المتبقي',
+      profitPending: 'أدخل صافي ربحهم النهائي عند انتهاء العمل لحساب حصتنا.',
+      appearance: 'المظهر', themeLight: 'فاتح', themeDark: 'داكن', themeAuto: 'تلقائي', themeAutoHint: 'التلقائي يتبع إعدادات جهازك', collapseMenu: 'تصغير القائمة', expandMenu: 'توسيع القائمة',
+      daySummary: '{n} بند يحتاج إلى متابعتك اليوم.', daySummaryClear: 'لا شيء عاجل اليوم — يوم هادئ.'
     }
   },
   entities: {
     en: {
       Leads: ['Leads', 'Lead'], Clients: ['Clients', 'Client'], Companies: ['Companies', 'Company'], Cases: ['Cases', 'Case'],
       Consultations: ['Consultations', 'Consultation'], FollowUps: ['Tasks', 'Task'], Transactions: ['Finance', 'Payment'],
-      Documents: ['Documents', 'Document'], Users: ['Users', 'User']
+      Documents: ['Documents', 'Document'], Users: ['Users', 'User'],
+      ExternalPartners: ['External lawyers', 'External lawyer or firm'], Referrals: ['Referrals', 'Referral'],
+      ReferralWork: ['Our work on referrals', 'Work item'], ReferralPayments: ['Partner payments', 'Partner payment']
     },
     ar: {
       Leads: ['العملاء المحتملون', 'عميل محتمل'], Clients: ['الموكلون', 'موكل'], Companies: ['الشركات', 'شركة'], Cases: ['القضايا', 'قضية'],
       Consultations: ['الاستشارات', 'استشارة'], FollowUps: ['المهام', 'مهمة'], Transactions: ['الحسابات', 'دفعة'],
-      Documents: ['المستندات', 'مستند'], Users: ['المستخدمون', 'مستخدم']
+      Documents: ['المستندات', 'مستند'], Users: ['المستخدمون', 'مستخدم'],
+      ExternalPartners: ['المحامون والمكاتب الخارجية', 'جهة خارجية'], Referrals: ['الإحالات', 'إحالة'],
+      ReferralWork: ['أعمالنا في الإحالات', 'عمل'], ReferralPayments: ['مدفوعات الجهات الخارجية', 'دفعة من جهة خارجية']
     }
   },
   fields: {
@@ -131,7 +149,12 @@ window.MP_I18N = {
       CaseID: 'Case', ClientID: 'Client', LeadID: 'Lead', CompanyID: 'Company', ConsultationID: 'Consultation', EntityID: 'Linked record',
       EntityType: 'Linked to', CommercialRegistrationNumber: 'Commercial registration no.', TaxNumber: 'Tax no.', AssignedTo: 'Assigned to',
       AssignedLawyer: 'Assigned lawyer', ConvertedClientID: 'Converted client', CreatedFromLeadID: 'Created from lead', RecordedBy: 'Recorded by',
-      UploadedBy: 'Uploaded by', IsPaid: 'Paid', CampaignID: 'Campaign', FullName: 'Full name', CaseTitle: 'Title', Duration: 'Duration (minutes)'
+      UploadedBy: 'Uploaded by', IsPaid: 'Paid', CampaignID: 'Campaign', FullName: 'Full name', CaseTitle: 'Title', Duration: 'Duration (minutes)',
+      PartnerID: 'External lawyer or firm', PartnerType: 'Type', FirmName: 'Firm', PracticeAreas: 'Practice areas',
+      FullShareRate: 'Our share if they handle everything (%)', SharedShareRate: 'Our share if we do part (%)', ReferralID: 'Referral',
+      Scope: 'Who does the work', ExternalWork: 'They handle', SharePercent: 'Our share (%)', ReferredAt: 'Referred on',
+      FinalProfit: 'Their final profit', ExpectedShare: 'Our share', AdminFeesTotal: 'Our work fees', TotalDue: 'Total owed to us',
+      TotalReceived: 'Received', Balance: 'Still owed', CreatedBy: 'Referred by', WorkDate: 'Date', DoneBy: 'Done by'
     },
     ar: {
       FullName: 'الاسم الكامل', Email: 'البريد الإلكتروني', Role: 'الدور', Status: 'الحالة', Language: 'اللغة', CreatedAt: 'تاريخ الإنشاء',
@@ -147,7 +170,12 @@ window.MP_I18N = {
       PaymentStatus: 'حالة الدفع', MeetingLocation: 'مكان الاجتماع', Outcome: 'النتيجة', CaseID: 'القضية', ConsultationID: 'الاستشارة',
       Type: 'النوع', Amount: 'المبلغ', PaymentMethod: 'طريقة الدفع', PaymentDate: 'تاريخ الدفع', RecordedBy: 'سجّلها', Title: 'العنوان',
       DueDate: 'تاريخ الاستحقاق', CompletedAt: 'تاريخ الإكمال', EntityType: 'مرتبط بـ', EntityID: 'السجل المرتبط', FileName: 'اسم الملف',
-      FileType: 'نوع الملف', UploadedBy: 'رفعه', UploadedAt: 'تاريخ الرفع', ConfidentialityLevel: 'مستوى السرية', ArchivedAt: 'تاريخ الأرشفة', Event: 'الحدث', Detail: 'التفاصيل'
+      FileType: 'نوع الملف', UploadedBy: 'رفعه', UploadedAt: 'تاريخ الرفع', ConfidentialityLevel: 'مستوى السرية', ArchivedAt: 'تاريخ الأرشفة', Event: 'الحدث', Detail: 'التفاصيل',
+      PartnerID: 'الجهة الخارجية', PartnerType: 'النوع', Name: 'الاسم', FirmName: 'المكتب', City: 'المدينة', PracticeAreas: 'مجالات العمل',
+      FullShareRate: 'نسبتنا إذا تولوا كل العمل (%)', SharedShareRate: 'نسبتنا إذا شاركنا في العمل (%)', ReferralID: 'الإحالة',
+      Scope: 'من يقوم بالعمل', ExternalWork: 'يتولون', SharePercent: 'نسبتنا (%)', ReferredAt: 'تاريخ الإحالة',
+      FinalProfit: 'صافي ربحهم النهائي', ExpectedShare: 'حصتنا', AdminFeesTotal: 'رسوم أعمالنا', TotalDue: 'إجمالي المستحق لنا',
+      TotalReceived: 'المستلم', Balance: 'المتبقي', CreatedBy: 'أحالها', WorkDate: 'التاريخ', DoneBy: 'نفّذها'
     }
   },
   enums: {
@@ -167,13 +195,17 @@ window.MP_I18N = {
       CODE_SENT: 'تم إرسال رمز', CODE_UNKNOWN_EMAIL: 'بريد غير مسجّل', CODE_RATE_LIMITED: 'تجاوز حد الطلبات', CODE_WRONG: 'رمز خاطئ',
       CODE_LOCKED: 'تم إيقاف الرمز', CODE_MISSING: 'رمز منتهي أو غير موجود', SIGNED_IN: 'تسجيل دخول', SIGNED_OUT: 'تسجيل خروج',
       GOOGLE_DENIED: 'حساب Google غير مصرّح', SESSION_REJECTED: 'دخول مرفوض لمستخدم موقوف', FLOOD_PROTECTION: 'حماية من الطلبات الكثيفة',
-      LIMIT_CLEARED: 'تم السماح بإعادة المحاولة', SESSION_REVOKED: 'تم تسجيل خروج الجهاز'
+      LIMIT_CLEARED: 'تم السماح بإعادة المحاولة', SESSION_REVOKED: 'تم تسجيل خروج الجهاز',
+      FIRM: 'مكتب محاماة', FULL: 'يتولون كل العمل', SHARED: 'نشارك في جزء من العمل', COURT_HEARINGS: 'حضور الجلسات',
+      WHOLE_CASE: 'القضية كاملة', PART_OF_CASE: 'جزء من القضية', PROPOSED: 'مقترحة', SETTLED: 'تمت التسوية'
     },
     en: {
       EN: 'English', AR: 'العربية (Arabic)', CODE_SENT: 'Code sent', CODE_UNKNOWN_EMAIL: 'Unknown email', CODE_RATE_LIMITED: 'Too many requests',
       CODE_WRONG: 'Wrong code', CODE_LOCKED: 'Code locked', CODE_MISSING: 'Expired or no code', SIGNED_IN: 'Signed in', SIGNED_OUT: 'Signed out',
       GOOGLE_DENIED: 'Google account not allowed', SESSION_REJECTED: 'Deactivated user tried to enter', FLOOD_PROTECTION: 'Flood protection',
-      LIMIT_CLEARED: 'Retry allowed', SESSION_REVOKED: 'Device signed out'
+      LIMIT_CLEARED: 'Retry allowed', SESSION_REVOKED: 'Device signed out',
+      LAWYER: 'Lawyer', FIRM: 'Law firm', FULL: 'They handle everything', SHARED: 'We do part of the work', COURT_HEARINGS: 'Court hearings',
+      WHOLE_CASE: 'The whole case', PART_OF_CASE: 'Part of the case', PROPOSED: 'Proposed', SETTLED: 'Settled'
     }
   },
   settings: {
@@ -189,7 +221,8 @@ window.MP_I18N = {
     ar: {
       CREATED: 'تم الإنشاء', UPDATED: 'تم التعديل', ARCHIVED: 'تمت الأرشفة', CONVERTED: 'تم التحويل إلى موكل', FINANCIALS_RECALCULATED: 'تمت إعادة حساب المبالغ',
       PAYMENT_STATUS_RECALCULATED: 'تم تحديث حالة الدفع', LINKED_TO_CLIENT: 'تم الربط بالموكل', DUPLICATE_REVIEW_CONFIRMED: 'تم الحفظ بعد مراجعة التكرار',
-      TEAM_MEMBER_ADDED: 'تمت إضافة عضو إلى الفريق', TEAM_MEMBER_REMOVED: 'تمت إزالة عضو من الفريق', DOWNLOADED: 'تم التنزيل'
+      TEAM_MEMBER_ADDED: 'تمت إضافة عضو إلى الفريق', TEAM_MEMBER_REMOVED: 'تمت إزالة عضو من الفريق', DOWNLOADED: 'تم التنزيل',
+      REFERRAL_TOTALS_RECALCULATED: 'تم تحديث المبالغ المستحقة', REFERRAL_SETTLED: 'تمت التسوية بالكامل', REFERRAL_REOPENED: 'أعيد فتحها بعد تعديل دفعة'
     }
   },
   /** Arabic for the most common server messages; unmatched messages are shown as sent. */
@@ -224,7 +257,10 @@ window.MP_I18N = {
     [/code is wrong or has expired/, 'الرمز غير صحيح أو انتهت صلاحيته. اطلب رمزًا جديدًا.'],
     [/Too many codes were requested/, 'تم طلب رموز كثيرة لهذا البريد. حاول مرة أخرى بعد ساعة.'],
     [/^Please sign in/, 'يرجى تسجيل الدخول.'],
-    [/^Email is required/, 'أدخل بريدك الإلكتروني.']
+    [/^Email is required/, 'أدخل بريدك الإلكتروني.'],
+    [/only go to an active external lawyer/, 'يمكن الإحالة فقط إلى جهة خارجية نشطة.'],
+    [/must be between 0 and 100/, 'يجب أن تكون النسبة بين 0 و100.'],
+    [/while the case has active referrals/, 'لا يمكن تغيير الموكل أثناء وجود إحالات نشطة للقضية.']
   ]
 };
 </script>

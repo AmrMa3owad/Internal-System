@@ -96,10 +96,19 @@ The interface is designed so a new staff member can use it without training:
 - Duplicate review ("I reviewed these, save anyway"), lead → client conversion, archiving with confirmation, and owner settings.
 - Every text value is inserted with `textContent` (never `innerHTML`). Inputs use `dir="auto"`, so Arabic text displays right-to-left. Date-time inputs are sent without an offset and interpreted as Cairo time.
 
+### Design
+
+The "Ink & Gold" design comes in **Light**, **Dark**, and **Auto** (follows the device). Switch it with the sun / moon / screen buttons at the bottom of the menu or under Settings → Your preferences. The choice is saved per browser and applied before the page appears, so there is no flash. Every colour comes from one set of tokens in `Styles.html` (`:root` for light, `html[data-theme="dark"]` for dark), so both modes stay consistent.
+
+- The menu can collapse to an icon rail (the « button). Hovering an icon shows its name, and the choice is remembered.
+- Glass cards over a soft aurora and blueprint-grid background, gold accents, and glowing status dots.
+- Shimmering placeholders show the shape of each screen while it loads, and pages fade in.
+- Motion is switched off for people whose device asks for reduced motion.
+
 ### Preview locally
 
 ```
-node tools/preview-server.js     # http://127.0.0.1:8787
+node tools/preview-server.js     # http://127.0.0.1:8787  (add &theme=dark or &nav=collapsed)
 ```
 
 This serves the real `Index.html`/`App.html` against the in-memory runtime, seeded with fictional demo data. Switch roles with the bar at the top (`?as=owner|partner|lawyer|assistant`). Data resets on restart. It binds to localhost only and is never a deployment.
@@ -191,6 +200,29 @@ The structured report covers CRUD/archive, UUIDs, version conflicts, protected f
 Run `node tools/local-test-harness.js` for a local check. It loads every `.gs` file with in-memory fakes of the Apps Script services, enforces strict sheet dropdown validation on writes, runs bootstrap, `setupDatabase()`, the full suite, and public API identity smoke tests. It approximates Google Sheets; it does **not** replace running `runStage1DatabaseTests()` in the real Apps Script project before go-live.
 
 When regenerating the template, `python generate_database_template.py` writes only the workbook. The setup guide is hand-maintained; pass `--write-guide` only to deliberately overwrite it with the generator's version.
+
+## External lawyers and referrals
+
+External lawyers and law firms are **referral partners**. They never sign in. The app records which work the firm handles itself and which it refers out, and what each partner owes the firm.
+
+- **External lawyers** (`ExternalPartners`): a directory with two default share rates: *our share if they handle everything* and *our share if we do part of the work*.
+- **Referrals**: a case (and so its client) referred to a partner, with:
+  - **Who does the work:** *They handle everything* (`FULL`) or *We do part of the work* (`SHARED`, e.g. our team does the administrative work).
+  - **They handle:** court hearings, the whole case, or part of the case.
+  - **Our share (%):** filled from the partner's matching default when left blank, and editable per referral.
+  - **Their final profit**, entered when the work is done.
+- **Our work on referrals** (`ReferralWork`): each task our team does for a shared referral, with its own fee. Lawyers can log work, but only finance roles set fees.
+- **Partner payments** (`ReferralPayments`): money received from the partner.
+
+What the partner owes is calculated automatically:
+
+`Our share = final profit × share %` · `Total owed = our share + our work fees` · `Still owed = total owed − received`
+
+A completed referral that is fully paid becomes **Settled**, and goes back to Completed if a payment is removed. Cases and clients show **External · Firm** or **Shared · Firm**, and both lists can be filtered to *Internal* or *External*. The owner's home page shows what partners still owe.
+
+Access: owners and partners add partners and referrals. Finance roles (owner, partner, assistant) see shares and amounts and record partner payments. Lawyers see who handles a case and can log their work, but never the money. Lawyers and assistants see a referral only if they can see its case. A partner with active referrals, or a referral with payments, cannot be archived, and new referrals can only go to active partners.
+
+Databases created before this version gain the four new sheets automatically the first time they are used.
 
 ## Security page (owners)
 

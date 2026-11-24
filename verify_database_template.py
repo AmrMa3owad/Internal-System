@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from generate_database_template import ROOT, WORKBOOK_FILE, load_configuration
 
 
-REQUIRED_SHEETS = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog"]
+REQUIRED_SHEETS = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog", "ExternalPartners", "Referrals", "ReferralWork", "ReferralPayments"]
 EXPECTED_VALIDATIONS = {
     "Users": {"Role": "ROLES", "Status": "USER_STATUSES", "Language": "LANGUAGES"},
     "Leads": {"ClientType": "CLIENT_TYPES", "Source": "LEAD_SOURCES", "Priority": "PRIORITIES", "Status": "LEAD_STATUSES"},
@@ -20,6 +20,9 @@ EXPECTED_VALIDATIONS = {
     "Transactions": {"Type": "TRANSACTION_TYPES", "PaymentMethod": "PAYMENT_METHODS"},
     "FollowUps": {"Priority": "PRIORITIES", "Status": "FOLLOW_UP_STATUSES"},
     "Documents": {"ConfidentialityLevel": "CONFIDENTIALITY_LEVELS"},
+        "ExternalPartners": {"PartnerType": "PARTNER_TYPES", "Status": "PARTNER_STATUSES"},
+        "Referrals": {"Scope": "REFERRAL_SCOPES", "ExternalWork": "REFERRAL_WORK_TYPES", "Status": "REFERRAL_STATUSES"},
+        "ReferralPayments": {"PaymentMethod": "PAYMENT_METHODS"},
 }
 
 
@@ -40,7 +43,7 @@ def verify() -> dict[str, object]:
     if missing_sheets:
         errors.append("Missing worksheets: " + ", ".join(missing_sheets))
     else:
-        checks.append("All thirteen required entity worksheets exist.")
+        checks.append("All seventeen required entity worksheets exist.")
 
     for sheet_name in REQUIRED_SHEETS:
         if sheet_name not in workbook.sheetnames:

@@ -39,6 +39,14 @@ const MP_CONFIG = Object.freeze({
   TRANSACTION_TYPES: ['INCOME', 'EXPENSE'],
   PAYMENT_METHODS: ['CASH', 'BANK_TRANSFER', 'CARD', 'VODAFONE_CASH', 'INSTAPAY', 'CHEQUE', 'OTHER'],
   CONFIDENTIALITY_LEVELS: ['STANDARD', 'CONFIDENTIAL', 'RESTRICTED'],
+  // External lawyers and law firms the firm refers work to (they never sign in).
+  PARTNER_TYPES: ['LAWYER', 'FIRM'],
+  PARTNER_STATUSES: ['ACTIVE', 'INACTIVE'],
+  // FULL: the partner handles everything. SHARED: our team does part (e.g. administrative work) for a bigger share plus per-task fees.
+  REFERRAL_SCOPES: ['FULL', 'SHARED'],
+  REFERRAL_WORK_TYPES: ['COURT_HEARINGS', 'WHOLE_CASE', 'PART_OF_CASE'],
+  REFERRAL_STATUSES: ['PROPOSED', 'ACTIVE', 'COMPLETED', 'SETTLED', 'CANCELLED'],
+  CLOSED_REFERRAL_STATUSES: ['COMPLETED', 'SETTLED', 'CANCELLED'],
   ADMIN_ROLES: ['OWNER'],
   // Roles that only see records assigned to them (see Access.gs).
   RECORD_RESTRICTED_ROLES: ['LAWYER', 'ASSISTANT'],
@@ -47,7 +55,8 @@ const MP_CONFIG = Object.freeze({
   ENTITY_ID_PREFIXES: {
     Users: 'USR', Leads: 'LED', Clients: 'CLT', Companies: 'CMP', Cases: 'CAS',
     Consultations: 'CON', Transactions: 'TRX', FollowUps: 'FLW', Activities: 'ACT',
-    Documents: 'DOC', Assignments: 'ASG', AccessLog: 'LOG'
+    Documents: 'DOC', Assignments: 'ASG', AccessLog: 'LOG',
+    ExternalPartners: 'PTN', Referrals: 'REF', ReferralWork: 'RWK', ReferralPayments: 'RPY'
   }
 });
 
@@ -65,6 +74,10 @@ const MP_SYSTEM_MANAGED_FIELDS = Object.freeze({
   Documents: ['DocumentID', 'DriveFileID', 'FileType', 'UploadedBy', 'UploadedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   Assignments: ['AssignmentID', 'EntityType', 'EntityID', 'UserID', 'AddedBy', 'AddedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   AccessLog: ['LogID', 'Timestamp', 'Event', 'Email', 'UserID', 'Detail'],
+  ExternalPartners: ['PartnerID', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  Referrals: ['ReferralID', 'ClientID', 'ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'ClosedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  ReferralWork: ['WorkID', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  ReferralPayments: ['PaymentID', 'RecordedBy', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   Settings: ['SettingKey', 'UpdatedAt', 'UpdatedBy', 'Version']
 });
 
@@ -85,7 +98,15 @@ const MP_SCHEMAS = Object.freeze({
   // Extra team members per Lead/Client/Case, in addition to the record's main assignee.
   Assignments: ['AssignmentID', 'EntityType', 'EntityID', 'UserID', 'AddedBy', 'AddedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   // Every sign-in attempt (owners read it on the Security page).
-  AccessLog: ['LogID', 'Timestamp', 'Event', 'Email', 'UserID', 'Detail']
+  AccessLog: ['LogID', 'Timestamp', 'Event', 'Email', 'UserID', 'Detail'],
+  // Referral partners: external lawyers and law firms (tracking only; no sign-in).
+  ExternalPartners: ['PartnerID', 'PartnerType', 'Name', 'FirmName', 'ContactPerson', 'Phone', 'Email', 'City', 'PracticeAreas', 'FullShareRate', 'SharedShareRate', 'Notes', 'Status', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  // A case (and its client) referred to a partner; the firm receives a share of the partner's final profit.
+  Referrals: ['ReferralID', 'PartnerID', 'CaseID', 'ClientID', 'Scope', 'ExternalWork', 'SharePercent', 'Status', 'ReferredAt', 'FinalProfit', 'ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance', 'Notes', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'ClosedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  // Work our team does on a referral (e.g. administrative tasks); each has its own fee the partner owes.
+  ReferralWork: ['WorkID', 'ReferralID', 'Title', 'WorkDate', 'Fee', 'DoneBy', 'Notes', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  // Money received from a partner for a referral.
+  ReferralPayments: ['PaymentID', 'ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod', 'Description', 'RecordedBy', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version']
 });
 
 const MP_DEFAULT_SETTINGS = Object.freeze({
@@ -129,7 +150,11 @@ const MP_PERMISSIONS = Object.freeze({
   // Team membership and bulk assignment: who may grant staff access to records.
   Assignments: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ },
   // Sign-in activity, retry limits, and signed-in devices.
-  AccessLog: { read: ['OWNER'], update: ['OWNER'] }
+  AccessLog: { read: ['OWNER'], update: ['OWNER'] },
+  ExternalPartners: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, update: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ },
+  Referrals: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, update: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ },
+  ReferralWork: { read: MP_ALL_ROLES_, create: MP_ALL_ROLES_, update: MP_ALL_ROLES_, archive: MP_SENIOR_ROLES_ },
+  ReferralPayments: { read: MP_FINANCE_ROLES_, create: MP_FINANCE_ROLES_, update: MP_FINANCE_ROLES_, archive: MP_SENIOR_ROLES_ }
 });
 
 /** Foreign keys per entity (field -> target entity). Documents.EntityID is polymorphic via EntityType. */
@@ -140,7 +165,10 @@ const MP_REFERENCE_FIELDS = Object.freeze({
   Consultations: { LeadID: 'Leads', ClientID: 'Clients', AssignedLawyer: 'Users' },
   Transactions: { ClientID: 'Clients', CaseID: 'Cases', ConsultationID: 'Consultations', RecordedBy: 'Users' },
   FollowUps: { LeadID: 'Leads', ClientID: 'Clients', CaseID: 'Cases', AssignedTo: 'Users' },
-  Documents: { UploadedBy: 'Users' }
+  Documents: { UploadedBy: 'Users' },
+  Referrals: { PartnerID: 'ExternalPartners', CaseID: 'Cases', ClientID: 'Clients', CreatedBy: 'Users' },
+  ReferralWork: { ReferralID: 'Referrals', DoneBy: 'Users' },
+  ReferralPayments: { ReferralID: 'Referrals', RecordedBy: 'Users' }
 });
 
 /** Roles allowed to view a document of each confidentiality level. */
@@ -152,7 +180,10 @@ const MP_DOCUMENT_ACCESS = Object.freeze({
 
 /** Fields hidden from, and not writable by, roles without Transactions read access. */
 const MP_FINANCIAL_FIELDS = Object.freeze({
-  Cases: ['AgreedFee', 'TotalPaid', 'OutstandingBalance']
+  Cases: ['AgreedFee', 'TotalPaid', 'OutstandingBalance'],
+  ExternalPartners: ['FullShareRate', 'SharedShareRate'],
+  Referrals: ['SharePercent', 'FinalProfit', 'ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance'],
+  ReferralWork: ['Fee']
 });
 
 /** Kept in code (not created yet) to reserve the Stage 1 integration contract. */

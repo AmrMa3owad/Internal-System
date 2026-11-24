@@ -15,7 +15,7 @@
  */
 
 /** Entities exposed through the generic list/get/create/update/archive API. */
-const MP_API_ENTITIES_ = ['Users', 'Leads', 'Clients', 'Companies', 'Cases', 'Consultations', 'Transactions', 'FollowUps', 'Documents'];
+const MP_API_ENTITIES_ = ['Users', 'Leads', 'Clients', 'Companies', 'Cases', 'Consultations', 'Transactions', 'FollowUps', 'Documents', 'ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'];
 
 function mpApiRespond_(callback) {
   try { return mpSuccess_(callback()); }
@@ -116,6 +116,9 @@ function mpApiList_(actor, entity, options) {
   if (options.sortBy && hidden.indexOf(options.sortBy) !== -1) throw new Error('Cannot sort by restricted field: ' + options.sortBy + '.');
   if (options.includeArchived === true && MP_SENIOR_ROLES_.indexOf(actor.role) === -1) throw new Error('Only owners and partners may list archived records.');
   const scope = mpAccessScope_(actor);
+  // Cases and clients can be listed by who handles them: 'internal' or 'external' (referred to a partner).
+  const external = (options.handling === 'internal' || options.handling === 'external') && (entity === 'Cases' || entity === 'Clients') ? mpExternallyHandledIds_(entity) : null;
+  const idField = MP_SCHEMAS[entity][0];
   const result = mpDbList_(entity, {
     limit: options.limit,
     offset: options.offset,
@@ -126,6 +129,7 @@ function mpApiList_(actor, entity, options) {
     includeArchived: options.includeArchived === true,
     searchExclude: hidden,
     predicate: function(record) {
+      if (external && (options.handling === 'external') !== !!external[record[idField]]) return false;
       return (entity !== 'Documents' || mpCanViewDocument_(actor.role, record)) && mpRecordInScope_(scope, entity, record);
     }
   });

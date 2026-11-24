@@ -186,7 +186,10 @@ function mpApplySheetValidation_(sheet, headers) {
     Leads: { ClientType: MP_CONFIG.CLIENT_TYPES, Source: MP_CONFIG.LEAD_SOURCES, Priority: MP_CONFIG.PRIORITIES, Status: MP_CONFIG.LEAD_STATUSES },
     Clients: { ClientType: MP_CONFIG.CLIENT_TYPES, Status: MP_CONFIG.CLIENT_STATUSES }, Cases: { Priority: MP_CONFIG.PRIORITIES, Status: MP_CONFIG.CASE_STATUSES },
     Consultations: { PaymentStatus: MP_CONFIG.PAYMENT_STATUSES, Status: MP_CONFIG.CONSULTATION_STATUSES, IsPaid: ['TRUE', 'FALSE'] }, Transactions: { Type: MP_CONFIG.TRANSACTION_TYPES, PaymentMethod: MP_CONFIG.PAYMENT_METHODS },
-    FollowUps: { Priority: MP_CONFIG.PRIORITIES, Status: MP_CONFIG.FOLLOW_UP_STATUSES }, Documents: { ConfidentialityLevel: MP_CONFIG.CONFIDENTIALITY_LEVELS }
+    FollowUps: { Priority: MP_CONFIG.PRIORITIES, Status: MP_CONFIG.FOLLOW_UP_STATUSES }, Documents: { ConfidentialityLevel: MP_CONFIG.CONFIDENTIALITY_LEVELS },
+    ExternalPartners: { PartnerType: MP_CONFIG.PARTNER_TYPES, Status: MP_CONFIG.PARTNER_STATUSES },
+    Referrals: { Scope: MP_CONFIG.REFERRAL_SCOPES, ExternalWork: MP_CONFIG.REFERRAL_WORK_TYPES, Status: MP_CONFIG.REFERRAL_STATUSES },
+    ReferralPayments: { PaymentMethod: MP_CONFIG.PAYMENT_METHODS }
   }[sheet.getName()] || {};
   Object.keys(validations).forEach(function(header) {
     const column = headers.indexOf(header) + 1;
@@ -323,9 +326,27 @@ function mpHas_(object, key) { return !!object && Object.prototype.hasOwnPropert
 
 function mpSheet_(sheetName) {
   if (!MP_SCHEMAS[sheetName]) throw new Error('Unknown entity: ' + sheetName + '.');
-  const sheet = mpGetDatabase_().getSheetByName(sheetName);
-  if (!sheet) throw new Error('Missing database sheet: ' + sheetName + '.');
-  return sheet;
+  const spreadsheet = mpGetDatabase_();
+  const sheet = spreadsheet.getSheetByName(sheetName);
+  return sheet || mpCreateMissingSheet_(spreadsheet, sheetName);
+}
+
+/**
+ * Sheets added in later versions (e.g. referrals) are created on first use, so an
+ * existing database keeps working after an update even before setupDatabase() is re-run.
+ */
+function mpCreateMissingSheet_(spreadsheet, sheetName) {
+  try {
+    const sheet = spreadsheet.insertSheet(sheetName);
+    sheet.getRange(1, 1, 1, MP_SCHEMAS[sheetName].length).setValues([MP_SCHEMAS[sheetName]]);
+    mpConfigureSheetPresentation_(sheet, MP_SCHEMAS[sheetName]);
+    return sheet;
+  } catch (error) {
+    // Another request may have created it a moment ago.
+    const existing = spreadsheet.getSheetByName(sheetName);
+    if (existing) return existing;
+    throw new Error('Missing database sheet: ' + sheetName + '. Run setupDatabase(). ' + error.message);
+  }
 }
 
 function mpHeaders_(sheet) {
@@ -474,15 +495,19 @@ function mpInsertRecordLocked_(sheetName, input, confirmed, actorId, trustedFiel
   const record = mpValidateRecord_(sheetName, input, true);
   if (sheetName === 'Transactions') record.RecordedBy = mpAssertEntityId_('Users', actorId, 'RecordedBy', true);
   if (sheetName === 'Documents') { record.UploadedBy = mpAssertEntityId_('Users', actorId, 'UploadedBy', true); record.UploadedAt = mpNowIso_(); }
+  if (sheetName === 'ReferralPayments') record.RecordedBy = mpAssertEntityId_('Users', actorId, 'RecordedBy', true);
+  if (sheetName === 'Referrals') record.CreatedBy = mpAssertEntityId_('Users', actorId, 'CreatedBy', true);
   if (sheetName === 'Leads' && record.Status === 'CONVERTED') throw new Error('Use the lead conversion workflow to mark a lead CONVERTED.');
   Object.keys(trustedFields || {}).forEach(function(key) { record[key] = trustedFields[key]; });
   mpValidateReferences_(sheetName, record);
+  if (sheetName === 'Referrals') mpAssertPartnerActiveForNewReferral_(record);
   const duplicates = mpFindDuplicates_(sheetName, record, '');
   mpAssertDuplicateReview_(sheetName, duplicates, confirmed);
   const sheet = mpSheet_(sheetName); const headers = mpHeaders_(sheet); const idColumn = MP_SCHEMAS[sheetName][0];
   record[idColumn] = mpNewId_(sheetName); mpApplyCreateDefaults_(sheetName, record, mpNowIso_()); mpAppendRecordChecked_(sheet, headers, record);
   try {
     if (sheetName === 'Transactions') mpSyncTransactionDependents_([record], actorId);
+    if (sheetName === 'ReferralWork' || sheetName === 'ReferralPayments') mpRecalculateReferrals_([record.ReferralID], actorId);
     mpLogActivity_(sheetName, record[idColumn], 'CREATED', 'Created ' + sheetName.slice(0, -1) + '.', actorId);
     if (duplicates.length) mpLogActivity_(sheetName, record[idColumn], 'DUPLICATE_REVIEW_CONFIRMED', 'Created after reviewing ' + duplicates.length + ' possible duplicate(s).', actorId);
   }
@@ -515,6 +540,7 @@ function mpDbUpdate_(sheetName, id, input, expectedVersion, actorId) {
     mpApplyUpdateDefaults_(sheetName, record); record.Version = Number(record.Version || 1) + 1; mpWriteRecordChecked_(result.sheet, result.headers, record._rowNumber, record);
     try {
       if (sheetName === 'Transactions') mpSyncTransactionDependents_([prior, record], actorId);
+      if (sheetName === 'ReferralWork' || sheetName === 'ReferralPayments') mpRecalculateReferrals_([prior.ReferralID, record.ReferralID], actorId);
       mpLogActivity_(sheetName, id, 'UPDATED', 'Updated ' + sheetName.slice(0, -1) + '.', actorId);
       if (duplicates.length) mpLogActivity_(sheetName, id, 'DUPLICATE_REVIEW_CONFIRMED', 'Updated after reviewing ' + duplicates.length + ' possible duplicate(s).', actorId);
     }
@@ -534,7 +560,7 @@ function mpDbArchive_(sheetName, id, expectedVersion, actorId) {
     mpAssertNoActiveChildrenBeforeArchive_(sheetName, id);
     if (sheetName === 'Users') mpAssertOwnerRetained_(record, { IsArchived: true });
     record.IsArchived = true; record.ArchivedAt = mpNowIso_(); record.Version = Number(record.Version || 1) + 1; mpWriteRecordChecked_(result.sheet, result.headers, record._rowNumber, record);
-    try { if (sheetName === 'Transactions') mpSyncTransactionDependents_([record], actorId); mpLogActivity_(sheetName, id, 'ARCHIVED', 'Archived ' + sheetName.slice(0, -1) + '.', actorId); }
+    try { if (sheetName === 'Transactions') mpSyncTransactionDependents_([record], actorId); if (sheetName === 'ReferralWork' || sheetName === 'ReferralPayments') mpRecalculateReferrals_([record.ReferralID], actorId); mpLogActivity_(sheetName, id, 'ARCHIVED', 'Archived ' + sheetName.slice(0, -1) + '.', actorId); }
     catch (error) { throw new Error('Record was archived but a dependent write failed. Reconciliation is required: ' + error.message); }
     return mpPublicRecord_(record);
   });
@@ -560,6 +586,11 @@ function mpAssertOwnerRetained_(user, changes) {
 }
 
 function mpApplyLifecycleFields_(sheetName, record, now) {
+  if (sheetName === 'Referrals') {
+    const closed = MP_CONFIG.CLOSED_REFERRAL_STATUSES.indexOf(record.Status) !== -1;
+    if (closed && mpIsBlank_(record.ClosedAt)) record.ClosedAt = now;
+    if (!closed) record.ClosedAt = '';
+  }
   if (sheetName === 'Cases') {
     const closed = MP_CONFIG.CLOSED_CASE_STATUSES.indexOf(record.Status) !== -1;
     if (closed && mpIsBlank_(record.ClosedAt)) record.ClosedAt = now;
@@ -577,6 +608,7 @@ function mpApplyCreateDefaults_(sheetName, record, now) {
   if (MP_SCHEMAS[sheetName].indexOf('CreatedAt') !== -1) record.CreatedAt = now;
   if (MP_SCHEMAS[sheetName].indexOf('UpdatedAt') !== -1) record.UpdatedAt = now;
   if (sheetName === 'Cases') { record.TotalPaid = 0; record.OutstandingBalance = Number(record.AgreedFee || 0); }
+  if (sheetName === 'Referrals') mpReferralDerive_(record);
   mpApplyLifecycleFields_(sheetName, record, now);
 }
 
@@ -585,6 +617,7 @@ function mpApplyUpdateDefaults_(sheetName, record) {
   if (MP_SCHEMAS[sheetName].indexOf('UpdatedAt') !== -1) record.UpdatedAt = now;
   if (sheetName === 'Cases') mpRefreshCaseFinancials_(record);
   if (sheetName === 'Consultations') mpDeriveConsultationPayment_(record, mpRows_('Transactions').records, false);
+  if (sheetName === 'Referrals') mpReferralDerive_(record);
   mpApplyLifecycleFields_(sheetName, record, now);
 }
 
@@ -617,6 +650,7 @@ function mpHasActiveReference_(sheetName, fieldName, value, optionalEntityType, 
 
 function mpAssertCaseClientChangeAllowed_(caseId) {
   if (mpHasActiveReference_('Transactions', 'CaseID', caseId)) throw new Error('Cases.ClientID cannot change while active transactions exist. Archive or correct those transactions first.');
+  if (mpHasActiveReference_('Referrals', 'CaseID', caseId)) throw new Error('Cases.ClientID cannot change while the case has active referrals.');
 }
 
 /** Open work only: a user's completed history never blocks archiving them. */
@@ -632,8 +666,10 @@ function mpAssertNoActiveChildrenBeforeArchive_(sheetName, id) {
     Users: [['Leads', 'AssignedTo', null, MP_OPEN_WORK_.Leads], ['Cases', 'AssignedLawyer', null, MP_OPEN_WORK_.Cases], ['Consultations', 'AssignedLawyer', null, MP_OPEN_WORK_.Consultations], ['FollowUps', 'AssignedTo', null, MP_OPEN_WORK_.FollowUps]],
     Leads: [['Consultations', 'LeadID'], ['FollowUps', 'LeadID'], ['Documents', 'EntityID', 'LEAD']],
     Companies: [['Clients', 'CompanyID'], ['Leads', 'CompanyID']],
-    Clients: [['Cases', 'ClientID'], ['Consultations', 'ClientID'], ['Transactions', 'ClientID'], ['FollowUps', 'ClientID'], ['Documents', 'EntityID', 'CLIENT']],
-    Cases: [['Transactions', 'CaseID'], ['FollowUps', 'CaseID'], ['Documents', 'EntityID', 'CASE']],
+    ExternalPartners: [['Referrals', 'PartnerID']],
+    Referrals: [['ReferralPayments', 'ReferralID'], ['ReferralWork', 'ReferralID']],
+    Clients: [['Cases', 'ClientID'], ['Consultations', 'ClientID'], ['Transactions', 'ClientID'], ['FollowUps', 'ClientID'], ['Documents', 'EntityID', 'CLIENT'], ['Referrals', 'ClientID']],
+    Cases: [['Transactions', 'CaseID'], ['FollowUps', 'CaseID'], ['Documents', 'EntityID', 'CASE'], ['Referrals', 'CaseID']],
     Consultations: [['Transactions', 'ConsultationID']]
   }[sheetName] || [];
   const activeChild = relationships.filter(function(relationship) { return mpHasActiveReference_(relationship[0], relationship[1], id, relationship[2], relationship[3]); })[0];
@@ -819,12 +855,12 @@ function mpBootstrapOwner_(spreadsheet) {
 
 /** Full-sheet batch read prevents the old 100-record duplicate blind spot. */
 function mpFindDuplicates_(sheetName, input, excludeId) {
-  if (['Users', 'Leads', 'Clients', 'Companies'].indexOf(sheetName) === -1) return [];
+  if (['Users', 'Leads', 'Clients', 'Companies', 'ExternalPartners'].indexOf(sheetName) === -1) return [];
   const phone = mpNormalizePhone_(input.Phone); const email = mpNormalizeEmail_(input.Email); const registration = String(input.CommercialRegistrationNumber || '').trim().toLowerCase(); const taxNumber = String(input.TaxNumber || '').trim().toLowerCase();
   if (!phone && !email && !registration && !taxNumber) return [];
   const idColumn = MP_SCHEMAS[sheetName][0];
   return mpRows_(sheetName).records.filter(function(record) {
     if (record.IsArchived === true || record[idColumn] === excludeId) return false;
     return (phone && mpNormalizePhone_(record.Phone) === phone) || (email && mpNormalizeEmail_(record.Email) === email) || (registration && String(record.CommercialRegistrationNumber || '').trim().toLowerCase() === registration) || (taxNumber && String(record.TaxNumber || '').trim().toLowerCase() === taxNumber);
-  }).map(function(record) { return { id: record[idColumn], fullName: record.FullName || record.CompanyName, phone: record.Phone || '', email: record.Email || '' }; });
+  }).map(function(record) { return { id: record[idColumn], fullName: record.FullName || record.CompanyName || record.Name, phone: record.Phone || '', email: record.Email || '' }; });
 }

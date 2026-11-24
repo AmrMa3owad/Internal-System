@@ -419,6 +419,72 @@ function mpRunStage1DatabaseTests_() {
       mpUpdateSetting_('NOTIFICATION_PREFERENCES', { email: true, overdueFollowUps: true, upcomingConsultations: true }, prefs.version + 1, actor);
       mpTestAssert_(dailyReminderTrigger({ triggerUid: 'forged' }).ok === false && dailyReminderTrigger().ok === false, 'Reminder handler ran without its trigger.');
     });
+    mpTestRun_(results, 'external referrals: default share, profit split, our work fees, payments, settlement, access', function() {
+      const ownerActor = { userId: actor, role: 'OWNER', email: owner.Email, fullName: owner.FullName };
+      const findUser = function(email) { return mpRows_('Users').records.filter(function(user) { return user.Email === email; })[0]; };
+      const lawyerUser = findUser('lawyer@example.test');
+      const assistantUser = findUser('assistant@example.test');
+      const lawyerActor = { userId: lawyerUser.UserID, role: 'LAWYER', email: lawyerUser.Email, fullName: lawyerUser.FullName };
+      const assistantActor = { userId: assistantUser.UserID, role: 'ASSISTANT', email: assistantUser.Email, fullName: assistantUser.FullName };
+
+      const firm = mpApiCreate_(ownerActor, 'ExternalPartners', { Name: 'Nile Law Partners', PartnerType: 'FIRM', Phone: '+201005550001', FullShareRate: 20, SharedShareRate: 35 });
+      mpTestExpectError_(function() { mpApiCreate_(lawyerActor, 'ExternalPartners', { Name: 'Self-made partner' }); }, 'Lawyer added a partner.');
+      mpTestExpectError_(function() { mpApiCreate_(ownerActor, 'ExternalPartners', { Name: 'Bad rate', FullShareRate: 120 }); }, 'Share rate above 100% was accepted.');
+
+      const full = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: caseRecord.CaseID, Scope: 'FULL', ExternalWork: 'COURT_HEARINGS' });
+      mpTestAssert_(full.SharePercent === 20 && full.ClientID === client.ClientID && full.TotalDue === 0 && full.Status === 'ACTIVE' && full.CreatedBy === actor, 'Full-scope referral defaults are wrong.');
+      const shared = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: caseRecord.CaseID, Scope: 'SHARED', ExternalWork: 'PART_OF_CASE' });
+      mpTestAssert_(shared.SharePercent === 35, 'Shared-scope referral did not take the shared rate.');
+      const custom = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: caseRecord.CaseID, Scope: 'SHARED', SharePercent: 40 });
+      mpTestAssert_(custom.SharePercent === 40, 'A negotiated share was overwritten by the default.');
+      mpTestExpectError_(function() { mpApiCreate_(lawyerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: caseRecord.CaseID, Scope: 'FULL' }); }, 'Lawyer created a referral.');
+
+      // Our team's work on the referral: lawyers log it, finance prices it, fees add up per task.
+      mpTestExpectError_(function() { mpApiCreate_(lawyerActor, 'ReferralWork', { ReferralID: shared.ReferralID, Title: 'Filed papers', Fee: 500 }); }, 'Lawyer set a work fee.');
+      const work = mpApiCreate_(lawyerActor, 'ReferralWork', { ReferralID: shared.ReferralID, Title: 'Filed papers at the registry' });
+      mpApiUpdate_(ownerActor, 'ReferralWork', work.WorkID, { Fee: 500 }, mpDbGetById_('ReferralWork', work.WorkID, false).Version);
+      mpApiCreate_(ownerActor, 'ReferralWork', { ReferralID: shared.ReferralID, Title: 'Notarised power of attorney', Fee: 300 });
+
+      let current = mpDbGetById_('Referrals', shared.ReferralID, false);
+      mpTestAssert_(current.AdminFeesTotal === 800 && current.TotalDue === 800, 'Work fees were not added up.');
+      current = mpApiUpdate_(ownerActor, 'Referrals', shared.ReferralID, { FinalProfit: 10000, Status: 'COMPLETED' }, current.Version);
+      mpTestAssert_(current.ExpectedShare === 3500 && current.AdminFeesTotal === 800 && current.TotalDue === 4300 && current.Balance === 4300 && current.Status === 'COMPLETED' && !!current.ClosedAt, 'Share of final profit is wrong.');
+
+      mpTestExpectError_(function() { mpApiCreate_(lawyerActor, 'ReferralPayments', { ReferralID: shared.ReferralID, Amount: 100 }); }, 'Lawyer recorded a partner payment.');
+      mpApiCreate_(assistantActor, 'ReferralPayments', { ReferralID: shared.ReferralID, Amount: 4000, PaymentDate: '2026-11-20' });
+      current = mpDbGetById_('Referrals', shared.ReferralID, false);
+      mpTestAssert_(current.TotalReceived === 4000 && current.Balance === 300 && current.Status === 'COMPLETED', 'Partial partner payment not reflected.');
+      const last = mpApiCreate_(ownerActor, 'ReferralPayments', { ReferralID: shared.ReferralID, Amount: 300 });
+      current = mpDbGetById_('Referrals', shared.ReferralID, false);
+      mpTestAssert_(current.Balance === 0 && current.Status === 'SETTLED', 'Fully paid referral was not settled.');
+      mpApiArchive_(ownerActor, 'ReferralPayments', last.PaymentID, last.Version);
+      current = mpDbGetById_('Referrals', shared.ReferralID, false);
+      mpTestAssert_(current.Balance === 300 && current.Status === 'COMPLETED', 'Removing a payment did not reopen the referral.');
+
+      // Lawyers see that the case is external, but none of the money.
+      const lawyerView = mpApiGet_(lawyerActor, 'Referrals', shared.ReferralID);
+      mpTestAssert_(lawyerView.PartnerID === firm.PartnerID && lawyerView.SharePercent === undefined && lawyerView.Balance === undefined && lawyerView.FinalProfit === undefined, 'Lawyer saw referral money.');
+      mpTestAssert_(mpApiGet_(lawyerActor, 'ExternalPartners', firm.PartnerID).FullShareRate === undefined, 'Lawyer saw partner share rates.');
+      mpTestExpectError_(function() { mpApiList_(lawyerActor, 'ReferralPayments', {}); }, 'Lawyer listed partner payments.');
+
+      // Internal vs external handling.
+      const external = mpApiListWithLabels_(ownerActor, 'Cases', { handling: 'external', limit: 100 });
+      mpTestAssert_(external.records.some(function(item) { return item.CaseID === caseRecord.CaseID; }) && external.handling[caseRecord.CaseID].length === 3, 'External cases filter or labels are wrong.');
+      mpTestAssert_(!mpApiList_(ownerActor, 'Cases', { handling: 'internal', limit: 100 }).records.some(function(item) { return item.CaseID === caseRecord.CaseID; }), 'External case listed as internal.');
+      mpTestAssert_(mpApiList_(ownerActor, 'Clients', { handling: 'external', limit: 100 }).records.some(function(item) { return item.ClientID === client.ClientID; }), 'Client with an external case not marked external.');
+
+      // Protections.
+      mpTestExpectError_(function() { mpApiArchive_(ownerActor, 'ExternalPartners', firm.PartnerID, firm.Version); }, 'Partner archived while referrals are active.');
+      mpTestExpectError_(function() { mpApiArchive_(ownerActor, 'Referrals', shared.ReferralID, current.Version); }, 'Referral archived while it has payments.');
+      const retired = mpApiCreate_(ownerActor, 'ExternalPartners', { Name: 'Retired Counsel', Status: 'INACTIVE' });
+      mpTestExpectError_(function() { mpApiCreate_(ownerActor, 'Referrals', { PartnerID: retired.PartnerID, CaseID: caseRecord.CaseID, Scope: 'FULL' }); }, 'Referral to an inactive partner was accepted.');
+      const otherMatter = mpDbInsert_('Cases', { CaseTitle: 'Other matter', ClientID: client.ClientID }, actor);
+      const hidden = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: otherMatter.CaseID, Scope: 'FULL' });
+      mpTestExpectError_(function() { mpApiGet_(lawyerActor, 'Referrals', hidden.ReferralID); }, 'Lawyer saw a referral on a case outside their assignments.');
+
+      const dashboard = mpApiDashboard_(ownerActor);
+      mpTestAssert_(dashboard.sections.referrals.owed >= 300 && dashboard.sections.referrals.awaitingPayment >= 1 && mpApiDashboard_(lawyerActor).sections.referrals.owed === undefined, 'Referral dashboard figures are wrong.');
+    });
     mpTestRun_(results, 'compatible binding and incompatible-schema rejection', function() {
       const compatibleReport = mpBindExistingDatabase_(sandbox.getId(), false);
       mpTestAssert_(compatibleReport.compatible === true, 'Compatible sandbox did not bind.');

@@ -248,6 +248,17 @@ runtime.setActiveEmail(OWNER);
 const floodLog = fn('apiCall')('', 'apiListAccessLog', [{ limit: 100 }]).data.records.filter((r) => r.Event === 'FLOOD_PROTECTION');
 check('security: scripted floods are paused and logged once', flooded.ok === false && flooded.error.code === 'RATE_LIMITED' && floodLog.length === 1);
 
+// An existing database from before referrals existed: the new sheets appear on first use.
+runtime.setActiveEmail(OWNER);
+const liveDb = fn('mpGetDatabase_')();
+['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].forEach((name) => { const sheet = liveDb.getSheetByName(name); if (sheet) liveDb.deleteSheet(sheet); });
+fn('mpResetExecutionCaches_')();
+runtime.advanceCacheClock(60 * 60 * 1000);
+const lawyerAfterUpdate = as('unassigned@example.test', 'apiStart');
+const ownerReferrals = ['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].map((name) => as(OWNER, 'apiListView', name, {})).filter((r) => !r.ok)[0] || { ok: true };
+check('update: an older database gains the referral sheets automatically', lawyerAfterUpdate.ok && ownerReferrals.ok && ['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].every((name) => !!liveDb.getSheetByName(name)), JSON.stringify({ lawyer: lawyerAfterUpdate.ok || lawyerAfterUpdate.error, owner: ownerReferrals.ok || ownerReferrals.error, sheets: ['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].map((name) => !!liveDb.getSheetByName(name)) }));
+runtime.setActiveEmail(OWNER);
+
 // Static checks on the HTML Service files.
 const app = fs.readFileSync(path.join(ROOT, 'App.html'), 'utf8');
 const script = (app.match(/<script>([\s\S]*)<\/script>/) || [])[1] || '';

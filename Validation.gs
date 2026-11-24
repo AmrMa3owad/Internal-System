@@ -90,6 +90,42 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.Status = mpAssertEnum_(record.Status || 'OPEN', MP_CONFIG.FOLLOW_UP_STATUSES, 'Status', true);
       if (!mpIsBlank_(record.CompletedAt)) record.CompletedAt = mpDateIso_(record.CompletedAt, 'CompletedAt', false);
       break;
+    case 'ExternalPartners':
+      record.Name = mpRequiredText_(record.Name, 'Name', 200);
+      record.PartnerType = mpAssertEnum_(record.PartnerType || 'LAWYER', MP_CONFIG.PARTNER_TYPES, 'PartnerType', true);
+      record.Status = mpAssertEnum_(record.Status || 'ACTIVE', MP_CONFIG.PARTNER_STATUSES, 'Status', true);
+      record.Email = mpValidateEmail_(record.Email, 'Email', false);
+      record.Phone = mpValidatePhone_(record.Phone, false);
+      record.FullShareRate = mpValidatePercent_(record.FullShareRate, 'FullShareRate');
+      record.SharedShareRate = mpValidatePercent_(record.SharedShareRate, 'SharedShareRate');
+      break;
+    case 'Referrals':
+      record.PartnerID = mpRequiredText_(record.PartnerID, 'PartnerID', 80);
+      record.CaseID = mpRequiredText_(record.CaseID, 'CaseID', 80);
+      record.Scope = mpAssertEnum_(record.Scope, MP_CONFIG.REFERRAL_SCOPES, 'Scope', true);
+      record.ExternalWork = mpAssertEnum_(record.ExternalWork || 'WHOLE_CASE', MP_CONFIG.REFERRAL_WORK_TYPES, 'ExternalWork', true);
+      record.Status = mpAssertEnum_(record.Status || 'ACTIVE', MP_CONFIG.REFERRAL_STATUSES, 'Status', true);
+      record.SharePercent = mpValidatePercent_(record.SharePercent, 'SharePercent');
+      record.ReferredAt = mpDateIso_(mpIsBlank_(record.ReferredAt) ? mpNowIso_().slice(0, 10) : record.ReferredAt, 'ReferredAt', true);
+      if (!mpIsBlank_(record.FinalProfit)) {
+        record.FinalProfit = mpToNumber_(record.FinalProfit, 'FinalProfit', true);
+        if (record.FinalProfit < 0) throw new Error('FinalProfit cannot be negative.');
+      }
+      break;
+    case 'ReferralWork':
+      record.ReferralID = mpRequiredText_(record.ReferralID, 'ReferralID', 80);
+      record.Title = mpRequiredText_(record.Title, 'Title', 250);
+      record.WorkDate = mpDateIso_(mpIsBlank_(record.WorkDate) ? mpNowIso_().slice(0, 10) : record.WorkDate, 'WorkDate', true);
+      record.Fee = mpIsBlank_(record.Fee) ? '' : mpToNumber_(record.Fee, 'Fee', true);
+      if (record.Fee !== '' && record.Fee < 0) throw new Error('Fee cannot be negative.');
+      break;
+    case 'ReferralPayments':
+      record.ReferralID = mpRequiredText_(record.ReferralID, 'ReferralID', 80);
+      record.Amount = mpToNumber_(record.Amount, 'Amount', true);
+      if (record.Amount <= 0) throw new Error('Amount must be greater than zero.');
+      record.PaymentMethod = mpAssertEnum_(record.PaymentMethod || 'BANK_TRANSFER', MP_CONFIG.PAYMENT_METHODS, 'PaymentMethod', true);
+      record.PaymentDate = mpDateIso_(mpIsBlank_(record.PaymentDate) ? mpNowIso_().slice(0, 10) : record.PaymentDate, 'PaymentDate', true);
+      break;
     case 'Documents':
       record.EntityType = mpAssertEnum_(record.EntityType, MP_CONFIG.DOCUMENT_ENTITY_TYPES, 'EntityType', true);
       record.EntityID = mpRequiredText_(record.EntityID, 'EntityID', 80);
@@ -101,6 +137,14 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       if (!isCreate) return record;
   }
   return mpSanitizeRecordText_(record);
+}
+
+/** A share percentage: blank, or a number from 0 to 100. */
+function mpValidatePercent_(value, fieldName) {
+  if (mpIsBlank_(value)) return '';
+  const number = mpToNumber_(value, fieldName, true);
+  if (number < 0 || number > 100) throw new Error(fieldName + ' must be between 0 and 100.');
+  return number;
 }
 
 /** PracticeArea is optional, but when supplied must be a configured value. */
@@ -149,6 +193,9 @@ function mpSanitizeRecordText_(record) {
 function mpValidateReferences_(sheetName, record) {
   const checks = {
     Leads: [['CompanyID', 'Companies'], ['AssignedTo', 'Users']],
+    Referrals: [['PartnerID', 'ExternalPartners'], ['CaseID', 'Cases']],
+    ReferralWork: [['ReferralID', 'Referrals'], ['DoneBy', 'Users']],
+    ReferralPayments: [['ReferralID', 'Referrals']],
     Clients: [['CompanyID', 'Companies'], ['AssignedTo', 'Users']],
     Cases: [['ClientID', 'Clients'], ['AssignedLawyer', 'Users']],
     Consultations: [['LeadID', 'Leads'], ['ClientID', 'Clients'], ['AssignedLawyer', 'Users']],
