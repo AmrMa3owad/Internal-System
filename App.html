@@ -1,0 +1,1505 @@
+<script>
+(function () {
+  'use strict';
+
+  var I = window.MP_I18N;
+
+  // ------------------------------------------------------------ Icons (inline SVG, stroke style)
+  var ICONS = {
+    home: ['M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'],
+    inbox: ['M22 12h-6l-2 3h-4l-2-3H2', 'M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'],
+    users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', { c: [9, 7, 4] }, 'M23 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
+    briefcase: [{ r: [2, 7, 20, 14, 2] }, 'M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16'],
+    calendar: [{ r: [3, 4, 18, 18, 2] }, 'M16 2v4', 'M8 2v4', 'M3 10h18'],
+    check: ['M20 6L9 17l-5-5'],
+    task: ['M9 11l3 3L22 4', 'M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
+    wallet: ['M12 1v22', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
+    file: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
+    building: [{ r: [4, 2, 16, 20, 2] }, 'M9 22v-4h6v4', 'M8 6h.01', 'M16 6h.01', 'M12 6h.01', 'M8 10h.01', 'M16 10h.01', 'M12 10h.01', 'M8 14h.01', 'M16 14h.01', 'M12 14h.01'],
+    user: [{ c: [12, 7, 4] }, 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'],
+    sliders: ['M4 21v-7', 'M4 10V3', 'M12 21v-9', 'M12 8V3', 'M20 21v-5', 'M20 12V3', 'M1 14h6', 'M9 8h6', 'M17 16h6'],
+    search: [{ c: [11, 11, 7] }, 'M21 21l-4.35-4.35'],
+    plus: ['M12 5v14', 'M5 12h14'],
+    phone: ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z'],
+    chat: ['M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z'],
+    mail: ['M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', 'M22 6l-10 7L2 6'],
+    download: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M7 10l5 5 5-5', 'M12 15V3'],
+    upload: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'M17 8l-5-5-5 5', 'M12 3v12'],
+    chevron: ['M9 18l6-6-6-6'],
+    down: ['M6 9l6 6 6-6'],
+    back: ['M15 18l-6-6 6-6'],
+    x: ['M18 6L6 18', 'M6 6l12 12'],
+    menu: ['M3 12h18', 'M3 6h18', 'M3 18h18'],
+    globe: [{ c: [12, 12, 10] }, 'M2 12h20', 'M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'],
+    more: [{ c: [12, 12, 1] }, { c: [19, 12, 1] }, { c: [5, 12, 1] }],
+    edit: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z'],
+    archive: ['M21 8v13H3V8', 'M1 3h22v5H1z', 'M10 12h4'],
+    swap: ['M17 1l4 4-4 4', 'M3 11V9a4 4 0 0 1 4-4h14', 'M7 23l-4-4 4-4', 'M21 13v2a4 4 0 0 1-4 4H3'],
+    sun: [{ c: [12, 12, 4] }, 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.41-1.41', 'M17.66 6.34l1.41-1.41'],
+    info: [{ c: [12, 12, 10] }, 'M12 16v-4', 'M12 8h.01'],
+    bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 0 1-3.46 0']
+  };
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+  function icon(name, extraClass) {
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('class', 'icon' + (extraClass ? ' ' + extraClass : ''));
+    svg.setAttribute('aria-hidden', 'true');
+    (ICONS[name] || []).forEach(function (part) {
+      var el;
+      if (typeof part === 'string') { el = document.createElementNS(SVG_NS, 'path'); el.setAttribute('d', part); }
+      else if (part.c) { el = document.createElementNS(SVG_NS, 'circle'); el.setAttribute('cx', part.c[0]); el.setAttribute('cy', part.c[1]); el.setAttribute('r', part.c[2]); }
+      else { el = document.createElementNS(SVG_NS, 'rect'); el.setAttribute('x', part.r[0]); el.setAttribute('y', part.r[1]); el.setAttribute('width', part.r[2]); el.setAttribute('height', part.r[3]); el.setAttribute('rx', part.r[4]); }
+      svg.appendChild(el);
+    });
+    return svg;
+  }
+
+  // ------------------------------------------------------------ What each kind of record looks like
+  var ENTITY_UI = {
+    Leads: { icon: 'inbox', tile: 'lead', title: 'FullName', sub: ['Phone', 'PracticeArea'], cols: ['Status', 'AssignedTo', 'NextFollowUpAt'], status: 'Status', contact: true,
+      essentials: ['FullName', 'Phone', 'Source', 'PracticeArea', 'Description', 'AssignedTo'] },
+    Clients: { icon: 'users', title: 'FullName', sub: ['Phone', 'Email'], cols: ['ClientType', 'AssignedTo', 'Status'], status: 'Status', contact: true,
+      essentials: ['FullName', 'Phone', 'Email', 'ClientType', 'CompanyID', 'AssignedTo'] },
+    Cases: { icon: 'briefcase', tile: 'case', title: 'CaseTitle', sub: ['CaseNumber', 'ClientID'], cols: ['Status', 'AssignedLawyer', 'Deadline', 'OutstandingBalance'], status: 'Status',
+      essentials: ['CaseTitle', 'ClientID', 'PracticeArea', 'AssignedLawyer', 'Deadline', 'AgreedFee', 'CaseNumber'] },
+    Consultations: { icon: 'calendar', tile: 'meet', sub: ['ClientID', 'LeadID', 'ConsultationType'], cols: ['Status', 'AssignedLawyer', 'PaymentStatus'], status: 'Status',
+      essentials: ['ConsultationDate', 'Duration', 'ClientID', 'LeadID', 'AssignedLawyer', 'Fee'] },
+    FollowUps: { icon: 'task', tile: 'task', title: 'Title', sub: ['CaseID', 'ClientID', 'LeadID'], cols: ['DueDate', 'AssignedTo', 'Priority'], status: 'Status',
+      essentials: ['Title', 'DueDate', 'AssignedTo', 'CaseID', 'ClientID', 'LeadID'] },
+    Transactions: { icon: 'wallet', sub: ['ClientID', 'CaseID', 'PaymentMethod'], cols: ['PaymentDate', 'Type'],
+      essentials: ['Type', 'Amount', 'PaymentMethod', 'PaymentDate', 'ClientID', 'CaseID'] },
+    Documents: { icon: 'file', title: 'FileName', sub: ['EntityID', 'FileType'], cols: ['ConfidentialityLevel', 'UploadedAt'] },
+    Companies: { icon: 'building', title: 'CompanyName', sub: ['ContactPerson', 'Phone'], cols: ['Email'], contact: true,
+      essentials: ['CompanyName', 'ContactPerson', 'Phone', 'Email'] },
+    Users: { icon: 'user', title: 'FullName', sub: ['Email'], cols: ['Role', 'Status', 'LastLogin'], status: 'Status',
+      essentials: ['FullName', 'Email', 'Role', 'Language'] }
+  };
+  /** Fields that only make sense in some situations. */
+  var SHOW_IF = { CompanyID: function (values) { return values.ClientType === 'COMPANY'; } };
+  var NAV = [
+    ['home'],
+    ['Leads', 'Clients', 'Cases'],
+    ['FollowUps', 'Consultations'],
+    ['Transactions', 'Documents'],
+    ['more', 'Companies', 'Users', 'settings']
+  ];
+  var NEW_MENU = ['Leads', 'Clients', 'Cases', 'FollowUps', 'Consultations', 'Transactions', 'Documents'];
+  var DATETIME_FIELDS = ['CreatedAt', 'UpdatedAt', 'ArchivedAt', 'ClosedAt', 'CompletedAt', 'LastLogin', 'UploadedAt', 'Timestamp', 'ConsultationDate', 'PaymentDate', 'LastContactAt', 'NextFollowUpAt', 'AddedAt'];
+  var DATE_FIELDS = ['StartDate', 'Deadline', 'DueDate'];
+  var MONEY_FIELDS = ['AgreedFee', 'TotalPaid', 'OutstandingBalance', 'Fee', 'Amount'];
+  var NEVER_SHOW = ['IsArchived', 'ArchivedAt', 'Version', 'DriveFileID', 'CreatedAt', 'UpdatedAt', 'IsPaid'];
+  var PILL_FIELDS = ['Status', 'PaymentStatus', 'Priority', 'Type', 'EntityType', 'ConfidentialityLevel', 'Role', 'Language', 'ClientType', 'Source', 'PracticeArea', 'PaymentMethod'];
+  var TONES = {
+    ok: ['COMPLETED', 'PAID', 'ACTIVE', 'CONVERTED', 'QUALIFIED', 'INCOME', 'STANDARD'],
+    danger: ['LOST', 'CANCELLED', 'NO_SHOW', 'URGENT', 'INACTIVE', 'UNPAID', 'RESTRICTED', 'NOT_QUALIFIED', 'EXPENSE'],
+    warn: ['HIGH', 'PARTIALLY_PAID', 'AWAITING_CLIENT', 'AWAITING_EXTERNAL_ACTION', 'AWAITING_RESPONSE', 'DOCUMENTS_REQUIRED', 'CONFIDENTIAL', 'NEGOTIATION', 'PROPOSAL_SENT'],
+    info: ['NEW', 'OPEN', 'SCHEDULED', 'IN_PROGRESS', 'INITIAL_REVIEW', 'UNDER_PREPARATION', 'CONTACTED', 'CONSULTATION_SCHEDULED']
+  };
+  var PIPELINE_COLORS = ['#24476f', '#3f6a96', '#b0874a', '#c9a46a', '#4d6b58', '#7a8f7f', '#6b4a63', '#a59d8f'];
+  var DOC_TARGETS = { LEAD: 'Leads', CLIENT: 'Clients', CASE: 'Cases' };
+  var SCOPED_ENTITIES = ['Leads', 'Clients', 'Cases', 'Consultations', 'FollowUps', 'Transactions', 'Documents'];
+  var PAGE_SIZE = 30;
+
+  var state = { boot: null, stack: [], current: null, lang: 'en', today: cairoToday() };
+
+  // ------------------------------------------------------------ Language
+  function t(key, params) {
+    var text = (I.ui[state.lang] && I.ui[state.lang][key]) || I.ui.en[key] || key;
+    Object.keys(params || {}).forEach(function (name) { text = text.split('{' + name + '}').join(String(params[name])); });
+    return text;
+  }
+  function lower(text) { return state.lang === 'en' ? String(text).toLowerCase() : String(text); }
+  function entityTitle(entity) { return (I.entities[state.lang][entity] || I.entities.en[entity])[0]; }
+  function entitySingular(entity) { return (I.entities[state.lang][entity] || I.entities.en[entity])[1]; }
+  function humanize(value) {
+    var text = String(value).replace(/_/g, ' ').toLowerCase();
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  function enumLabel(value) {
+    var map = I.enums[state.lang] || {};
+    return map[value] || (state.lang === 'en' && I.enums.en[value]) || humanize(value);
+  }
+  function fieldLabel(field) {
+    var local = I.fields[state.lang] || {};
+    if (local[field]) return local[field];
+    if (I.fields.en[field]) return I.fields.en[field];
+    var spaced = field.replace(/ID$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+  }
+  function settingLabel(key) { return (I.settings[state.lang] || {})[key] || I.settings.en[key] || humanize(key); }
+  function translateError(message) {
+    if (state.lang !== 'ar' || !message) return message;
+    for (var i = 0; i < I.errors.length; i += 1) {
+      var match = String(message).match(I.errors[i][0]);
+      if (match) return I.errors[i][1] === 'required' ? 'الحقل مطلوب: ' + fieldLabel(match[1]) : I.errors[i][1];
+    }
+    return message;
+  }
+  function errorMessage(error) { return translateError(error && error.message) || t('somethingWrong'); }
+  function locale() { return state.lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB'; }
+  function applyLanguage(code) {
+    state.lang = String(code || 'EN').toLowerCase() === 'ar' ? 'ar' : 'en';
+    document.documentElement.lang = state.lang;
+    document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+    var toggle = clear($('lang-toggle'));
+    toggle.appendChild(icon('globe'));
+    toggle.appendChild(document.createTextNode(t('languageToggle')));
+    $('global-search').placeholder = t('searchEverything');
+    renderMe();
+    renderNewMenu();
+  }
+
+  // ------------------------------------------------------------ Helpers
+  function call(name) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      var runner = google.script.run
+        .withSuccessHandler(function (response) {
+          if (response && response.ok) resolve(response.data);
+          else reject(response && response.error ? response.error : { message: 'Unexpected server response.' });
+        })
+        .withFailureHandler(function (error) { reject({ message: (error && error.message) || String(error) }); });
+      runner[name].apply(runner, args);
+    });
+  }
+
+  function append(el, child) {
+    if (child === null || child === undefined || child === false) return;
+    if (Array.isArray(child)) { child.forEach(function (c) { append(el, c); }); return; }
+    el.appendChild(child instanceof Node ? child : document.createTextNode(String(child)));
+  }
+
+  /** Element builder. Text is always set via text nodes, never parsed as HTML. */
+  function h(tag, props) {
+    var el = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (key) {
+      var value = props[key];
+      if (value === null || value === undefined || value === false) return;
+      if (key === 'class') el.className = value;
+      else if (key === 'text') el.textContent = value;
+      else if (key.indexOf('on') === 0 && typeof value === 'function') el.addEventListener(key.slice(2), value);
+      else if (key === 'value') el.value = value;
+      else if (key === 'checked' || key === 'disabled' || key === 'selected' || key === 'required' || key === 'hidden') el[key] = !!value;
+      else el.setAttribute(key, value === true ? '' : String(value));
+    });
+    for (var i = 2; i < arguments.length; i += 1) append(el, arguments[i]);
+    return el;
+  }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+  function $(id) { return document.getElementById(id); }
+  function blank(value) { return value === null || value === undefined || String(value).trim() === ''; }
+  function tone(value) {
+    var keys = Object.keys(TONES);
+    for (var i = 0; i < keys.length; i += 1) if (TONES[keys[i]].indexOf(value) !== -1) return keys[i];
+    return 'neutral';
+  }
+  function pill(value, plain) { return h('span', { class: 'pill ' + tone(value) + (plain ? ' plain' : ''), text: enumLabel(value) }); }
+  function money(value) {
+    var currency = (state.boot && state.boot.business.currency) || 'EGP';
+    var number = Number(value || 0);
+    try { return new Intl.NumberFormat(state.lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-EG', { style: 'currency', currency: currency, maximumFractionDigits: 0 }).format(number); }
+    catch (e) { return currency + ' ' + number.toFixed(0); }
+  }
+  function cairoToday() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date()); }
+  function cairoHour() { return Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Cairo', hour: 'numeric', hour12: false }).format(new Date())); }
+  function dayNumber(iso) { var p = String(iso).slice(0, 10).split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000; }
+  function dayDiff(iso) { return blank(iso) ? null : Math.round(dayNumber(iso) - dayNumber(state.today)); }
+  function timeOf(iso) { var text = String(iso || ''); return text.length >= 16 && text.slice(11, 16) !== '00:00' ? text.slice(11, 16) : ''; }
+  function shortDate(iso) {
+    var p = String(iso).slice(0, 10).split('-');
+    var date = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 12));
+    var opts = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+    if (p[0] !== state.today.slice(0, 4)) opts.year = 'numeric';
+    try { return new Intl.DateTimeFormat(locale(), opts).format(date); } catch (e) { return String(iso).slice(0, 10); }
+  }
+  /** "Today", "Tomorrow", "In 3 days", "12 Mar" … plus the time when there is one. */
+  function friendlyDate(iso, withTime) {
+    if (blank(iso)) return '';
+    var n = dayDiff(iso);
+    var text = n === 0 ? t('today') : n === 1 ? t('tomorrow') : n === -1 ? t('yesterday') : (n > 1 && n < 7) ? t('inDays', { n: n }) : shortDate(iso);
+    var time = withTime ? timeOf(iso) : '';
+    return time ? text + ' · ' + time : text;
+  }
+  /** Due-date chip: overdue tasks turn red, today amber, tomorrow blue. */
+  function dueChip(iso, withTime) {
+    if (blank(iso)) return null;
+    var n = dayDiff(iso);
+    if (n < 0) return h('span', { class: 'pill danger plain', text: t('overdueDays', { n: -n }) });
+    return h('span', { class: 'pill plain ' + (n === 0 ? 'warn' : n === 1 ? 'info' : 'neutral'), dir: 'auto', text: friendlyDate(iso, withTime) });
+  }
+  function initials(name) {
+    var words = String(name || '?').trim().split(/\s+/).filter(Boolean);
+    return ((words[0] || '?').charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '')).toUpperCase();
+  }
+  function avatar(name, size) {
+    var sum = 0; String(name || '').split('').forEach(function (ch) { sum += ch.charCodeAt(0); });
+    return h('span', { class: 'avatar a' + (sum % 6) + (size ? ' ' + size : ''), text: initials(name), title: name || '' });
+  }
+  function person(id, labels) {
+    var name = (labels && labels[id]) || userName(id);
+    if (!name) return h('span', { class: 'faint', text: '—' });
+    return h('span', { class: 'person' }, avatar(name, 'sm'), h('span', { dir: 'auto', text: name }));
+  }
+  function waLink(phone) {
+    var digits = String(phone || '').replace(/\D/g, '');
+    if (digits.indexOf('00') === 0) digits = digits.slice(2);
+    if (digits.length === 11 && digits.charAt(0) === '0') digits = '20' + digits.slice(1);
+    return 'https://wa.me/' + digits;
+  }
+
+  function can(entity, action) {
+    var perms = state.boot && state.boot.permissions[entity];
+    return !!perms && perms.indexOf(action) !== -1;
+  }
+  function isSenior() { return state.boot && (state.boot.role === 'OWNER' || state.boot.role === 'PARTNER'); }
+  function canAssign(entity) { return state.boot.assignable.indexOf(entity) !== -1 && can('Assignments', 'create') && can(entity, 'update'); }
+  function formMeta(entity) { return state.boot.forms[entity]; }
+  function fieldMeta(entity, field) {
+    var meta = formMeta(entity);
+    if (!meta) return null;
+    for (var i = 0; i < meta.fields.length; i += 1) if (meta.fields[i].name === field) return meta.fields[i];
+    return null;
+  }
+  function isHiddenField(entity, field) { var meta = formMeta(entity); return !!meta && meta.hiddenFields.indexOf(field) !== -1; }
+  function refTarget(entity, field, record) {
+    if (entity === 'Documents' && field === 'EntityID') return DOC_TARGETS[record.EntityType];
+    var meta = fieldMeta(entity, field);
+    if (meta && meta.ref) return meta.ref;
+    return { ConvertedClientID: 'Clients', CreatedFromLeadID: 'Leads', RecordedBy: 'Users', UploadedBy: 'Users', AssignedTo: 'Users', AssignedLawyer: 'Users' }[field] || null;
+  }
+  function recordId(entity, record) { return record[formMeta(entity).idField]; }
+  function recordLabel(entity, record) {
+    if (entity === 'Consultations') return t('consultationOn', { d: friendlyDate(record.ConsultationDate, true) });
+    if (entity === 'Transactions') return enumLabel(record.Type || '') + ' · ' + money(record.Amount);
+    return record[formMeta(entity).labelField] || recordId(entity, record);
+  }
+  function userName(id) {
+    var users = (state.boot && state.boot.users) || [];
+    for (var i = 0; i < users.length; i += 1) if (users[i].UserID === id) return users[i].FullName;
+    return null;
+  }
+  function detailLink(entity, id, label, className) {
+    return h('a', { class: className || null, dir: 'auto', onclick: function (event) { event.stopPropagation(); navigate({ view: 'detail', entity: entity, id: id }); } }, label || id);
+  }
+  /** Plain text for compact lines (list subtitles, feed context). */
+  function fieldText(entity, field, record, labels) {
+    var value = record[field];
+    if (blank(value)) return '';
+    var target = refTarget(entity, field, record);
+    if (target) return (labels && labels[value]) || (target === 'Users' && userName(value)) || '';
+    if (MONEY_FIELDS.indexOf(field) !== -1) return money(value);
+    if (DATE_FIELDS.indexOf(field) !== -1 || DATETIME_FIELDS.indexOf(field) !== -1) return friendlyDate(value, DATETIME_FIELDS.indexOf(field) !== -1);
+    if (PILL_FIELDS.indexOf(field) !== -1) return enumLabel(value);
+    return String(value);
+  }
+  function subParts(entity, record, labels) {
+    return (ENTITY_UI[entity].sub || []).filter(function (field) { return !isHiddenField(entity, field); })
+      .map(function (field) { return fieldText(entity, field, record, labels); }).filter(Boolean);
+  }
+  function subLine(entity, record, labels) { return subParts(entity, record, labels).join(' · '); }
+  /** Each piece is isolated so phone numbers and names keep their own direction in either language. */
+  function joinParts(parts) { return parts.filter(Boolean).map(function (part, i) { return [i ? ' · ' : '', h('bdi', { text: part })]; }); }
+  /** Rich value for detail facts and list cells. */
+  function formatValue(entity, field, record, labels) {
+    var value = record[field];
+    if (blank(value) && value !== 0) return h('span', { class: 'faint', text: '—' });
+    var target = refTarget(entity, field, record);
+    if (target === 'Users') return person(value, labels);
+    if (target) {
+      var label = labels && labels[value];
+      if (!label || !can(target, 'read')) return h('span', { dir: 'auto', text: label || '—' });
+      return detailLink(target, value, label);
+    }
+    if (MONEY_FIELDS.indexOf(field) !== -1) return h('span', { text: money(value) });
+    if (field === 'DueDate' || field === 'Deadline' || field === 'NextFollowUpAt') return dueChip(value, field === 'NextFollowUpAt');
+    if (DATE_FIELDS.indexOf(field) !== -1 || DATETIME_FIELDS.indexOf(field) !== -1) return h('span', { dir: 'auto', text: friendlyDate(value, DATETIME_FIELDS.indexOf(field) !== -1) });
+    if (value === true || value === false) return value ? t('yes') : t('no');
+    if (field === 'Phone') return h('a', { href: 'tel:' + String(value).replace(/\s/g, ''), dir: 'ltr', onclick: function (event) { event.stopPropagation(); } }, String(value));
+    if (field === 'Email') return h('a', { href: 'mailto:' + value, onclick: function (event) { event.stopPropagation(); } }, String(value));
+    var meta = fieldMeta(entity, field);
+    if ((meta && meta.type === 'enum') || PILL_FIELDS.indexOf(field) !== -1) return pill(value);
+    return h('span', { dir: 'auto', text: String(value) });
+  }
+
+  function toast(message, isError) {
+    var el = h('div', { class: 'toast' + (isError ? ' error' : '') }, icon(isError ? 'info' : 'check'), h('span', { dir: 'auto', text: message }));
+    $('toasts').appendChild(el);
+    setTimeout(function () { el.remove(); }, isError ? 7000 : 3200);
+  }
+  function content() { return clear($('content')); }
+  function loading() { append(content(), h('div', { class: 'loading', text: t('loading') })); }
+  function showError(error) { append(content(), h('div', { class: 'alert danger', text: errorMessage(error) })); }
+  function pageHead(title, sub, actions, back) {
+    return h('div', { class: 'page-head' },
+      h('div', { class: 'titles' },
+        back ? h('a', { class: 'back-link', onclick: goBack }, icon('back', 'flip'), t('back')) : null,
+        h('h1', { class: 'page-title', dir: 'auto', text: title }),
+        sub ? h('div', { class: 'page-sub', dir: 'auto' }, sub) : null),
+      actions && actions.length ? h('div', { class: 'page-actions' }, actions) : null);
+  }
+  function emptyState(iconName, title, text, action) {
+    return h('div', { class: 'empty-state' }, h('div', { class: 'tile-icon' }, icon(iconName)), h('h3', { text: title }), text ? h('p', { text: text }) : null, action || null);
+  }
+  function closeMenus() { document.querySelectorAll('.menu').forEach(function (menu) { menu.hidden = true; }); }
+
+  // ------------------------------------------------------------ Navigation
+  function navigate(route, replace) {
+    if (route.view === 'dashboard') route = { view: 'home' };
+    if (state.current && !replace) state.stack.push(state.current);
+    if (state.stack.length > 30) state.stack.shift();
+    state.current = route;
+    closeDrawer();
+    closeMenus();
+    window.scrollTo(0, 0);
+    render();
+  }
+  function goBack() { state.current = state.stack.pop() || { view: 'home' }; render(); }
+  function render() {
+    renderNav();
+    var route = state.current;
+    if (route.view === 'list') return showList(route);
+    if (route.view === 'detail') return showDetail(route);
+    if (route.view === 'settings') return showSettings();
+    return showHome();
+  }
+  function openDrawer() { $('sidebar').classList.add('open'); $('scrim').hidden = false; }
+  function closeDrawer() { $('sidebar').classList.remove('open'); $('scrim').hidden = true; }
+
+  function renderNav() {
+    var nav = clear($('nav'));
+    var route = state.current || {};
+    NAV.forEach(function (group, index) {
+      var items = group.filter(function (item) {
+        if (item === 'home' || item === 'more') return true;
+        if (item === 'settings') return can('Settings', 'read');
+        return can(item, 'read');
+      });
+      var real = items.filter(function (item) { return item !== 'more'; });
+      if (!real.length) return;
+      if (index > 0) nav.appendChild(h('div', { class: 'nav-gap' }));
+      items.forEach(function (item) {
+        if (item === 'more') { nav.appendChild(h('div', { class: 'nav-label', text: t('more') })); return; }
+        var active = (item === 'home' && route.view === 'home') || (item === 'settings' && route.view === 'settings') ||
+          ((route.view === 'list' || route.view === 'detail') && route.entity === item);
+        var iconName = item === 'home' ? 'home' : item === 'settings' ? 'sliders' : ENTITY_UI[item].icon;
+        var label = item === 'home' ? t('navHome') : item === 'settings' ? t('navSettings') : entityTitle(item);
+        nav.appendChild(h('a', { class: active ? 'active' : '', onclick: function () {
+          state.stack = [];
+          navigate(item === 'home' ? { view: 'home' } : item === 'settings' ? { view: 'settings' } : { view: 'list', entity: item }, true);
+        } }, icon(iconName), h('span', { text: label })));
+      });
+    });
+  }
+
+  function renderMe() {
+    if (!state.boot) return;
+    var me = clear($('me'));
+    me.appendChild(avatar(state.boot.fullName || state.boot.email));
+    me.appendChild(h('div', { style: 'min-width:0' }, h('div', { class: 'me-name', dir: 'auto', text: state.boot.fullName || state.boot.email }), h('div', { class: 'me-role', text: enumLabel(state.boot.role) })));
+    $('brand-tag').textContent = t('brandTag');
+  }
+
+  function startCreate(entity, presets, labels, onSaved) {
+    var done = onSaved || function (record) { navigate({ view: 'detail', entity: entity, id: recordId(entity, record) }); };
+    if (entity === 'Documents') openUpload({ presets: presets, labels: labels, onSaved: done });
+    else openForm({ entity: entity, presets: presets, labels: labels, onSaved: done });
+  }
+
+  function renderNewMenu() {
+    if (!state.boot) return;
+    var holder = clear($('new-menu'));
+    var options = NEW_MENU.filter(function (entity) { return can(entity, 'create'); });
+    if (!options.length) return;
+    var menu = h('div', { class: 'menu', hidden: true });
+    options.forEach(function (entity) {
+      menu.appendChild(h('button', { type: 'button', onclick: function () { menu.hidden = true; startCreate(entity); } },
+        icon(entity === 'Documents' ? 'upload' : ENTITY_UI[entity].icon), entity === 'Documents' ? t('uploadDocument') : entitySingular(entity)));
+    });
+    var button = h('button', { class: 'btn primary', type: 'button', onclick: function (event) { event.stopPropagation(); var open = menu.hidden; closeMenus(); menu.hidden = !open; } },
+      icon('plus'), h('span', { class: 'new-label', text: t('new') }));
+    holder.appendChild(button);
+    holder.appendChild(menu);
+  }
+
+  // ------------------------------------------------------------ Global search
+  function setupSearch() {
+    var input = $('global-search');
+    var box = $('search-results');
+    var timer = null;
+    var seq = 0;
+    var items = [];
+    var active = -1;
+    $('search-icon').appendChild(icon('search'));
+    function highlight(index) {
+      active = index;
+      items.forEach(function (item, i) { item.el.classList.toggle('active', i === index); });
+    }
+    function open(item) { box.hidden = true; input.value = ''; input.blur(); navigate({ view: 'detail', entity: item.entity, id: item.id }); }
+    function run() {
+      var query = input.value.trim();
+      if (query.length < 2) { box.hidden = true; return; }
+      var mine = ++seq;
+      call('apiSearch', query).then(function (result) {
+        if (mine !== seq) return;
+        clear(box);
+        items = [];
+        active = -1;
+        if (!result.groups.length) { box.appendChild(h('div', { class: 'search-empty', text: t('noResultsFor', { q: query }) })); box.hidden = false; return; }
+        result.groups.forEach(function (group) {
+          box.appendChild(h('div', { class: 'search-group', text: entityTitle(group.entity) }));
+          group.records.forEach(function (record) {
+            var item = { entity: group.entity, id: recordId(group.entity, record) };
+            var name = recordLabel(group.entity, record);
+            item.el = h('button', { class: 'search-item', type: 'button', onclick: function () { open(item); } },
+              ENTITY_UI[group.entity].title === 'FullName' ? avatar(name, 'sm') : h('span', { class: 'tile-icon', style: 'width:28px;height:28px;border-radius:8px' }, icon(ENTITY_UI[group.entity].icon)),
+              h('span', { style: 'min-width:0' }, h('div', { dir: 'auto', style: 'font-weight:500', text: name }), h('div', { class: 'muted', style: 'font-size:12.5px' }, joinParts(subParts(group.entity, record, group.labels)))));
+            items.push(item);
+            box.appendChild(item.el);
+          });
+        });
+        box.hidden = false;
+        highlight(0);
+      }).catch(function (error) { clear(box).appendChild(h('div', { class: 'search-empty', text: errorMessage(error) })); box.hidden = false; });
+    }
+    input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 220); });
+    input.addEventListener('focus', function () { if (items.length && input.value.trim().length >= 2) box.hidden = false; });
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowDown') { event.preventDefault(); highlight(Math.min(items.length - 1, active + 1)); }
+      else if (event.key === 'ArrowUp') { event.preventDefault(); highlight(Math.max(0, active - 1)); }
+      else if (event.key === 'Enter' && items[active]) { event.preventDefault(); open(items[active]); }
+      else if (event.key === 'Escape') { box.hidden = true; input.blur(); }
+    });
+    document.addEventListener('click', function (event) { if (!$('search').contains(event.target)) box.hidden = true; });
+    document.addEventListener('keydown', function (event) {
+      if ((event.ctrlKey || event.metaKey) && String(event.key).toLowerCase() === 'k') { event.preventDefault(); input.focus(); input.select(); }
+    });
+  }
+
+  // ------------------------------------------------------------ Home ("Your day")
+  function greeting() {
+    var hour = cairoHour();
+    var name = String((state.boot.fullName || '').split(/\s+/)[0] || '');
+    return t(hour < 12 ? 'goodMorning' : hour < 17 ? 'goodAfternoon' : 'goodEvening', { name: name });
+  }
+  function longToday() {
+    try { return new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Cairo' }).format(new Date()); }
+    catch (e) { return state.today; }
+  }
+
+  function markDone(task, button, after) {
+    button.disabled = true;
+    button.classList.add('done');
+    call('apiUpdate', 'FollowUps', task.FollowUpID, { Status: 'COMPLETED' }, task.Version).then(function () {
+      toast(t('taskDone'));
+      if (after) after();
+    }).catch(function (error) {
+      button.disabled = false;
+      button.classList.remove('done');
+      toast(errorMessage(error), true);
+    });
+  }
+  function doneButton(task, after) {
+    var button = h('button', { class: 'done-btn', type: 'button', title: t('markDone'), 'aria-label': t('markDone') }, icon('check'));
+    button.addEventListener('click', function (event) { event.stopPropagation(); markDone(task, button, after); });
+    return button;
+  }
+  function contactButtons(record) {
+    if (blank(record.Phone)) return [];
+    return [
+      h('a', { class: 'icon-button', href: 'tel:' + String(record.Phone).replace(/\s/g, ''), title: t('call'), onclick: function (event) { event.stopPropagation(); } }, icon('phone')),
+      h('a', { class: 'icon-button', href: waLink(record.Phone), target: '_blank', rel: 'noopener', title: 'WhatsApp', onclick: function (event) { event.stopPropagation(); } }, icon('chat'))
+    ];
+  }
+
+  function showHome() {
+    var root = content();
+    root.appendChild(pageHead(greeting(), longToday()));
+    var body = h('div', null, h('div', { class: 'loading', text: t('loading') }));
+    root.appendChild(body);
+    call('apiGetDashboard').then(function (data) {
+      state.today = data.today || state.today;
+      clear(body);
+      var s = data.sections;
+      var labels = data.labels || {};
+      var me = state.boot.userId;
+      var scope = { value: 'mine' };
+
+      function collect(onlyMine) {
+        var now = [];
+        var later = [];
+        var add = function (item, bucket) { (bucket === 'later' ? later : now).push(item); };
+        var mineOk = function (id) { return !onlyMine || id === me; };
+        if (s.followUps) {
+          var tasks = (onlyMine ? s.followUps.mine : s.followUps.due);
+          tasks.forEach(function (task) {
+            if (!mineOk(task.AssignedTo)) return;
+            var n = dayDiff(task.DueDate);
+            add({ kind: 'task', date: task.DueDate, record: task }, n <= 1 ? 'now' : 'later');
+          });
+        }
+        if (s.consultations) s.consultations.upcoming.forEach(function (item) {
+          if (!mineOk(item.AssignedLawyer)) return;
+          add({ kind: 'meet', date: item.ConsultationDate, record: item }, dayDiff(item.ConsultationDate) <= 1 ? 'now' : 'later');
+        });
+        if (s.cases) s.cases.deadlines.forEach(function (item) {
+          if (!mineOk(item.AssignedLawyer)) return;
+          add({ kind: 'case', date: item.Deadline, record: item }, dayDiff(item.Deadline) <= 2 ? 'now' : 'later');
+        });
+        if (s.leads) s.leads.followUpDue.forEach(function (lead) {
+          if (!mineOk(lead.AssignedTo)) return;
+          add({ kind: 'lead', date: lead.NextFollowUpAt, record: lead }, 'now');
+        });
+        var byDate = function (a, b) { return String(a.date).localeCompare(String(b.date)); };
+        return { now: now.sort(byDate), later: later.sort(byDate) };
+      }
+
+      function feedItem(item, refresh) {
+        var r = item.record;
+        var entity = { task: 'FollowUps', meet: 'Consultations', case: 'Cases', lead: 'Leads' }[item.kind];
+        var title = item.kind === 'meet' ? (labels[r.ClientID] || labels[r.LeadID] || t('consultation')) : recordLabel(entity, r);
+        var ctx = [];
+        if (item.kind === 'task') ctx.push(labels[r.CaseID] || labels[r.ClientID] || labels[r.LeadID] || '');
+        if (item.kind === 'meet') ctx.push(r.ConsultationType || t('consultation'), timeOf(r.ConsultationDate));
+        if (item.kind === 'case') ctx.push(t('deadline'), labels[r.ClientID] || '');
+        if (item.kind === 'lead') ctx.push(t('callBack'), r.Phone || '');
+        var owner = r.AssignedTo || r.AssignedLawyer;
+        if (scope.value === 'all' && owner) ctx.push(userName(owner) || '');
+        var acts = [];
+        if (item.kind === 'lead') acts = contactButtons(r);
+        return h('li', null,
+          item.kind === 'task' && can('FollowUps', 'update') ? doneButton(r, refresh) : h('span', { class: 'tile-icon ' + item.kind }, icon({ task: 'task', meet: 'calendar', case: 'briefcase', lead: 'inbox' }[item.kind])),
+          h('div', { class: 'body' }, detailLink(entity, recordId(entity, r), title, 'title'), h('div', { class: 'ctx' }, joinParts(ctx))),
+          h('div', { class: 'acts' }, acts, dueChip(item.date, item.kind === 'meet')));
+      }
+
+      var feedCard = h('div', { class: 'card' });
+      function drawFeed() {
+        clear(feedCard);
+        var lists = collect(scope.value === 'mine');
+        var head = h('div', { class: 'card-title' }, h('span', { text: t('yourDay') }), h('span', { class: 'spacer' }));
+        if (isSenior()) {
+          var seg = h('div', { class: 'segmented' });
+          [['mine', t('mine')], ['all', t('everyone')]].forEach(function (pair) {
+            seg.appendChild(h('button', { type: 'button', class: scope.value === pair[0] ? 'on' : '', text: pair[1], onclick: function () { scope.value = pair[0]; drawFeed(); } }));
+          });
+          head.appendChild(seg);
+        }
+        feedCard.appendChild(head);
+        if (!lists.now.length && !lists.later.length) {
+          feedCard.appendChild(h('div', { class: 'all-clear' }, h('div', { class: 'badge-ok' }, icon('sun')), h('h3', { text: t('allClear') }), h('div', { class: 'muted', text: t('allClearText') })));
+          return;
+        }
+        var refresh = function () { showHome(); };
+        if (lists.now.length) feedCard.appendChild(h('ul', { class: 'feed' }, lists.now.map(function (item) { return feedItem(item, refresh); })));
+        else feedCard.appendChild(h('div', { class: 'muted', style: 'padding:8px 4px', text: t('nothingToday') }));
+        if (lists.later.length) {
+          feedCard.appendChild(h('div', { class: 'feed-section', text: t('comingUp') }));
+          feedCard.appendChild(h('ul', { class: 'feed' }, lists.later.slice(0, 8).map(function (item) { return feedItem(item, refresh); })));
+        }
+      }
+      var initial = collect(true);
+      if (isSenior() && !initial.now.length && !initial.later.length) scope.value = 'all';
+      drawFeed();
+
+      var side = h('div');
+      var stats = h('div', { class: 'stats' });
+      var stat = function (label, value, sub, alert, onclick, isMoney) {
+        stats.appendChild(h('div', { class: 'card stat', onclick: onclick },
+          h('div', { class: 'stat-label', text: label }),
+          h('div', { class: 'stat-value' + (isMoney ? ' money' : ''), text: String(value) }),
+          sub ? h('div', { class: 'stat-sub' + (alert ? ' is-alert' : ''), text: sub }) : null));
+      };
+      if (s.cases) stat(t('openCases'), s.cases.open, t('assignedToYou', { n: s.cases.mine }), false, function () { navigate({ view: 'list', entity: 'Cases' }); });
+      if (s.followUps) stat(t('openTasks'), s.followUps.open, s.followUps.overdue ? t('overdueN', { n: s.followUps.overdue }) : t('noneOverdue'), s.followUps.overdue > 0, function () { navigate({ view: 'list', entity: 'FollowUps', filters: { Status: 'OPEN' } }); });
+      if (s.leads) stat(t('openLeads'), s.leads.open, s.leads.unassigned ? t('unassignedN', { n: s.leads.unassigned }) : t('newThisMonth', { n: s.leads.newThisMonth }), !!s.leads.unassigned, function () { navigate({ view: 'list', entity: 'Leads' }); });
+      if (s.consultations) stat(t('consultationsWeek'), s.consultations.upcomingCount, t('scheduled'), false, function () { navigate({ view: 'list', entity: 'Consultations', filters: { Status: 'SCHEDULED' } }); });
+      if (s.finance) {
+        stat(t('incomeThisMonth'), money(s.finance.incomeThisMonth), t('expenses', { x: money(s.finance.expenseThisMonth) }), false, function () { navigate({ view: 'list', entity: 'Transactions' }); }, true);
+        stat(t('outstanding'), money(s.finance.outstanding), t('acrossOpen'), false, function () { navigate({ view: 'list', entity: 'Cases' }); }, true);
+      }
+      side.appendChild(stats);
+
+      if (s.leads && Object.keys(s.leads.byStatus).length) {
+        var total = Object.keys(s.leads.byStatus).reduce(function (sum, key) { return sum + s.leads.byStatus[key]; }, 0);
+        var bar = h('div', { class: 'pipeline-bar' });
+        var legend = h('div', { class: 'legend' });
+        Object.keys(s.leads.byStatus).forEach(function (status, i) {
+          var color = PIPELINE_COLORS[i % PIPELINE_COLORS.length];
+          bar.appendChild(h('span', { style: 'width:' + (100 * s.leads.byStatus[status] / total) + '%;background:' + color, title: enumLabel(status) }));
+          legend.appendChild(h('a', { onclick: function () { navigate({ view: 'list', entity: 'Leads', filters: { Status: status } }); } },
+            h('i', { style: 'background:' + color }), enumLabel(status) + ' · ' + s.leads.byStatus[status]));
+        });
+        side.appendChild(h('div', { class: 'card', style: 'margin-top:12px' }, h('div', { class: 'card-title', text: t('pipeline') }), bar, legend));
+      }
+      body.appendChild(h('div', { class: 'home-grid' }, feedCard, side));
+    }).catch(function (error) { clear(body).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+  }
+
+  // ------------------------------------------------------------ Lists
+  function usersSelect(excludeIds, placeholder) {
+    var users = state.boot.users.filter(function (user) { return (excludeIds || []).indexOf(user.UserID) === -1; });
+    return h('select', { class: 'input' }, placeholder ? h('option', { value: '', text: placeholder }) : null,
+      users.map(function (user) { return h('option', { value: user.UserID, text: user.FullName + ' · ' + enumLabel(user.Role) }); }));
+  }
+
+  function rowTemplate(entity, cols) {
+    return 'minmax(0, 2.3fr)' + cols.map(function () { return ' minmax(0, 1fr)'; }).join('') + ' 20px';
+  }
+
+  function recordRows(entity, records, labels, options) {
+    options = options || {};
+    var ui = ENTITY_UI[entity];
+    var cols = (options.cols || ui.cols).filter(function (column) { return !isHiddenField(entity, column); });
+    var template = rowTemplate(entity, cols);
+    return records.map(function (record) {
+      var id = recordId(entity, record);
+      var title = recordLabel(entity, record);
+      var lead = h('div', { class: 'lead-cell' });
+      if (options.selection) {
+        var box = h('input', { type: 'checkbox', checked: !!options.selection[id], onclick: function (event) { event.stopPropagation(); } });
+        box.addEventListener('change', function () {
+          if (box.checked) options.selection[id] = true; else delete options.selection[id];
+          row.classList.toggle('selected', box.checked);
+          options.onSelect();
+        });
+        lead.appendChild(box);
+      }
+      if (entity === 'FollowUps' && record.Status === 'OPEN' && can('FollowUps', 'update') && record.IsArchived !== true) lead.appendChild(doneButton(record, options.onChange));
+      else if (ui.title === 'FullName' || ui.title === 'CompanyName') lead.appendChild(avatar(title));
+      else lead.appendChild(h('span', { class: 'tile-icon ' + (ui.tile || '') }, icon(ui.icon)));
+      lead.appendChild(h('div', { style: 'min-width:0' },
+        h('div', { class: 'primary', dir: 'auto' }, title, record.IsArchived === true ? h('span', { class: 'pill plain', style: 'margin-inline-start:8px', text: t('archived') }) : null),
+        h('div', { class: 'secondary' }, joinParts(subParts(entity, record, labels)))));
+      var row = h('div', { class: 'row' + (options.selection && options.selection[id] ? ' selected' : ''), style: 'grid-template-columns:' + template, onclick: function () { navigate({ view: 'detail', entity: entity, id: id }); } },
+        lead,
+        cols.map(function (column) { return h('div', { class: 'cell optional' + (MONEY_FIELDS.indexOf(column) !== -1 ? ' num' : '') }, formatValue(entity, column, record, labels)); }),
+        icon('chevron', 'chev flip'));
+      return row;
+    });
+  }
+
+  function showList(route) {
+    var entity = route.entity;
+    var ui = ENTITY_UI[entity];
+    var listState = { query: route.query || '', filters: Object.assign({}, route.filters || {}), offset: 0, includeArchived: false, records: [], labels: {} };
+    var selectable = canAssign(entity);
+    var selection = {};
+    var root = content();
+    var countLine = h('span');
+    var newButton = can(entity, 'create') ? h('button', { class: 'btn primary', type: 'button', onclick: function () { startCreate(entity); } },
+      icon(entity === 'Documents' ? 'upload' : 'plus'), entity === 'Documents' ? t('uploadDocument') : t('newRecord', { x: lower(entitySingular(entity)) })) : null;
+    root.appendChild(pageHead(entityTitle(entity), countLine, [newButton]));
+
+    var toolbar = h('div', { class: 'toolbar' });
+    var search = h('input', { class: 'input', type: 'search', placeholder: t('searchIn', { x: lower(entityTitle(entity)) }), value: listState.query, dir: 'auto' });
+    var timer = null;
+    search.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { listState.query = search.value.trim(); reset(); }, 280); });
+    toolbar.appendChild(h('div', { class: 'find' }, icon('search'), search));
+    var statusMeta = ui.status && fieldMeta(entity, ui.status);
+    if (statusMeta && statusMeta.type === 'enum') {
+      var options = statusMeta.options.slice();
+      if (entity === 'Leads' && options.indexOf('CONVERTED') === -1) options.push('CONVERTED');
+      var chips = h('div', { class: 'chips' });
+      if (options.length > 6) {
+        // Long status lists stay tidy as one dropdown.
+        var statusSelect = h('select', { class: 'input chip-select' }, h('option', { value: '', text: fieldLabel(ui.status) + ': ' + t('all') }),
+          options.map(function (value) { return h('option', { value: value, text: enumLabel(value), selected: listState.filters[ui.status] === value }); }));
+        statusSelect.addEventListener('change', function () {
+          if (statusSelect.value) listState.filters[ui.status] = statusSelect.value; else delete listState.filters[ui.status];
+          reset();
+        });
+        chips.appendChild(statusSelect);
+      }
+      var drawChips = function () {
+        if (options.length > 6) return;
+        clear(chips);
+        [''].concat(options).forEach(function (value) {
+          var on = (listState.filters[ui.status] || '') === value;
+          chips.appendChild(h('button', { type: 'button', class: 'chip' + (on ? ' on' : ''), text: value ? enumLabel(value) : t('all'), onclick: function () {
+            if (value) listState.filters[ui.status] = value; else delete listState.filters[ui.status];
+            drawChips(); reset();
+          } }));
+        });
+      };
+      drawChips();
+      toolbar.appendChild(chips);
+    }
+    if (isSenior()) {
+      var archived = h('input', { type: 'checkbox', onchange: function () { listState.includeArchived = archived.checked; reset(); } });
+      toolbar.appendChild(h('label', { class: 'toggle-link' }, archived, t('showArchived')));
+    }
+    root.appendChild(toolbar);
+    if (state.boot.restricted && SCOPED_ENTITIES.indexOf(entity) !== -1) root.appendChild(h('div', { class: 'note' }, icon('info'), t('restrictedNote')));
+
+    var bulkCount = h('strong');
+    var bulkUser = usersSelect([], null);
+    var bulkMode = h('select', { class: 'input' }, h('option', { value: 'main', text: t('asMain') }), h('option', { value: 'team', text: t('asTeam') }));
+    var bulkButton = h('button', { class: 'btn gold small', type: 'button', text: t('assign') });
+    var bulkBar = h('div', { class: 'bulk-bar', hidden: true }, bulkCount, h('span', { class: 'muted', style: 'color:#c9cfd8', text: t('assignTo') }), bulkUser, bulkMode, bulkButton,
+      h('button', { class: 'btn ghost small', type: 'button', style: 'color:#fff', text: t('cancel'), onclick: function () { selection = {}; reset(); } }));
+    bulkButton.addEventListener('click', function () {
+      var ids = Object.keys(selection);
+      if (!ids.length) return;
+      bulkButton.disabled = true;
+      call('apiBulkAssign', entity, ids, bulkUser.value, bulkMode.value).then(function (result) {
+        toast(t('assignedN', { n: result.assigned }));
+        var failed = result.results.filter(function (item) { return !item.ok; });
+        if (failed.length) toast(t('assignFailedN', { n: failed.length }) + ' ' + translateError(failed[0].message), true);
+        selection = {};
+        reset();
+      }).catch(function (error) { toast(errorMessage(error), true); }).then(function () { bulkButton.disabled = false; });
+    });
+    function updateBulk() {
+      var count = Object.keys(selection).length;
+      bulkBar.hidden = !count;
+      bulkCount.textContent = t('selectedN', { n: count });
+    }
+    if (selectable) root.appendChild(bulkBar);
+    var holder = h('div');
+    root.appendChild(holder);
+
+    function reset() { listState.offset = 0; listState.records = []; listState.labels = {}; load(); }
+    function load() {
+      updateBulk();
+      if (!listState.records.length) clear(holder).appendChild(h('div', { class: 'loading', text: t('loading') }));
+      call('apiListView', entity, {
+        query: listState.query, filters: listState.filters, offset: listState.offset, limit: PAGE_SIZE,
+        includeArchived: listState.includeArchived, sortBy: formMeta(entity).createdField, sortDirection: 'desc'
+      }).then(function (result) {
+        listState.records = listState.records.concat(result.records);
+        Object.assign(listState.labels, result.labels || {});
+        countLine.textContent = t('countOf', { n: result.total });
+        clear(holder);
+        if (!listState.records.length) {
+          var filtered = listState.query || Object.keys(listState.filters).length;
+          holder.appendChild(h('div', { class: 'rows' }, filtered
+            ? emptyState('search', t('noMatchesTitle'), t('noMatchesText'))
+            : emptyState(ui.icon, t('emptyTitle', { x: lower(entityTitle(entity)) }), t('emptyText'), newButton ? h('button', { class: 'btn primary', type: 'button', onclick: function () { startCreate(entity); } }, icon('plus'), t('newRecord', { x: lower(entitySingular(entity)) })) : null)));
+          return;
+        }
+        var rows = h('div', { class: 'rows' }, recordRows(entity, listState.records, listState.labels, {
+          selection: selectable ? selection : null, onSelect: updateBulk, onChange: reset
+        }));
+        if (listState.records.length < result.total) {
+          rows.appendChild(h('div', { class: 'list-foot' }, t('showingOf', { n: listState.records.length, total: result.total }),
+            h('button', { class: 'btn small', type: 'button', text: t('loadMore'), onclick: function () { listState.offset = listState.records.length; load(); } })));
+        }
+        holder.appendChild(rows);
+      }).catch(function (error) { clear(holder).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+    }
+    load();
+  }
+
+  // ------------------------------------------------------------ Detail
+  var RELATED_PRESETS = {
+    Cases: function (parent, link) { return link === 'ClientID' ? { ClientID: parent.ClientID } : {}; },
+    Transactions: function (parent, link, parentEntity) {
+      if (parentEntity === 'Cases') return { CaseID: parent.CaseID, ClientID: parent.ClientID };
+      if (parentEntity === 'Consultations') return { ConsultationID: parent.ConsultationID, ClientID: parent.ClientID || '' };
+      return { ClientID: parent.ClientID };
+    }
+  };
+
+  function teamCard(entity, id, initial) {
+    var card = h('div', { class: 'card side-card' });
+    function draw(team) {
+      clear(card);
+      card.appendChild(h('div', { class: 'card-title', text: t('team') }));
+      card.appendChild(h('div', { class: 'fact-label', text: t('mainAssignee') }));
+      card.appendChild(team.mainAssignee ? h('div', { class: 'person', style: 'display:flex' }, avatar(team.mainAssignee.FullName, 'sm'), h('span', { dir: 'auto', text: team.mainAssignee.FullName })) : h('div', { class: 'faint', text: t('notAssigned') }));
+      card.appendChild(h('div', { class: 'fact-label', style: 'margin-top:14px', text: t('teamMembers') }));
+      if (!team.members.length) card.appendChild(h('div', { class: 'faint', text: t('noMembers') }));
+      else card.appendChild(h('ul', { class: 'member-list' }, team.members.map(function (member) {
+        return h('li', null, avatar(member.FullName, 'sm'), h('span', { class: 'name', dir: 'auto', text: member.FullName }),
+          team.canManage ? h('button', { class: 'icon-button', type: 'button', title: t('remove'), onclick: function () {
+            call('apiRemoveTeamMember', member.AssignmentID).then(function (next) { toast(t('memberRemoved')); draw(next); }).catch(function (error) { toast(errorMessage(error), true); });
+          } }, icon('x')) : null);
+      })));
+      if (team.canManage) {
+        var exclude = team.members.map(function (member) { return member.UserID; }).concat(team.mainAssignee ? [team.mainAssignee.UserID] : []);
+        var select = usersSelect(exclude, null);
+        if (select.options.length) {
+          card.appendChild(h('div', { class: 'team-add' }, select, h('button', { class: 'btn small', type: 'button', onclick: function () {
+            call('apiAddTeamMember', entity, id, select.value).then(function (next) { toast(t('memberAdded')); draw(next); }).catch(function (error) { toast(errorMessage(error), true); });
+          } }, icon('plus'), t('add'))));
+        }
+      }
+      card.appendChild(h('div', { class: 'faint', style: 'font-size:12px;margin-top:12px', text: t('teamHelp') }));
+    }
+    draw(initial);
+    return card;
+  }
+
+  function statusControl(entity, record, onSaved) {
+    var ui = ENTITY_UI[entity];
+    if (!ui.status || blank(record[ui.status])) return null;
+    var value = record[ui.status];
+    var meta = fieldMeta(entity, ui.status);
+    var editable = can(entity, 'update') && record.IsArchived !== true && meta && meta.type === 'enum' && !(entity === 'Leads' && value === 'CONVERTED');
+    if (!editable) return pill(value);
+    var options = meta.options.slice();
+    if (options.indexOf(value) === -1) options.unshift(value);
+    var select = h('select', { class: 'status-select ' + tone(value), title: t('changeStatus') }, options.map(function (option) { return h('option', { value: option, text: enumLabel(option), selected: option === value }); }));
+    select.addEventListener('change', function () {
+      var change = {};
+      change[ui.status] = select.value;
+      select.disabled = true;
+      call('apiUpdate', entity, recordId(entity, record), change, record.Version).then(function () {
+        toast(t('statusChanged', { x: enumLabel(select.value) }));
+        onSaved();
+      }).catch(function (error) { select.disabled = false; select.value = value; toast(errorMessage(error), true); });
+    });
+    return select;
+  }
+
+  function moneyCard(record) {
+    if (record.AgreedFee === undefined || !(Number(record.AgreedFee) > 0)) return null;
+    var fee = Number(record.AgreedFee);
+    var paid = Number(record.TotalPaid || 0);
+    var balance = Number(record.OutstandingBalance || 0);
+    var pct = Math.max(0, Math.min(100, Math.round(100 * paid / fee)));
+    return h('div', { class: 'card money-card' },
+      h('div', { class: 'money-row' }, h('div', null, h('div', { class: 'fact-label', text: t('paidSoFar') }), h('div', { class: 'money-big', text: money(paid) })),
+        h('div', { style: 'text-align:end' }, h('div', { class: 'fact-label', text: t('agreedFee') }), h('div', { style: 'font-weight:500', text: money(fee) }))),
+      h('div', { class: 'progress' }, h('span', { style: 'width:' + pct + '%' })),
+      h('div', { class: balance < 0 ? 'muted' : (balance > 0 ? 'muted' : ''), style: 'font-size:13px', text: balance > 0 ? t('remaining', { x: money(balance), p: pct }) : balance < 0 ? t('overpaid', { x: money(-balance) }) : t('fullyPaid') }));
+  }
+
+  function showDetail(route) {
+    var entity = route.entity;
+    var ui = ENTITY_UI[entity];
+    content();
+    loading();
+    call('apiGetDetail', entity, route.id).then(function (data) {
+      var record = data.record;
+      var labels = data.labels || {};
+      var reload = function () { navigate({ view: 'detail', entity: entity, id: route.id, tab: state.current.tab }, true); };
+      var root = content();
+      var title = recordLabel(entity, record);
+
+      // Hero
+      var actions = [];
+      if (ui.contact && !blank(record.Phone)) {
+        actions.push(h('a', { class: 'btn', href: 'tel:' + String(record.Phone).replace(/\s/g, '') }, icon('phone'), t('call')));
+        actions.push(h('a', { class: 'btn', href: waLink(record.Phone), target: '_blank', rel: 'noopener' }, icon('chat'), 'WhatsApp'));
+      }
+      if (ui.contact && !blank(record.Email)) actions.push(h('a', { class: 'btn', href: 'mailto:' + record.Email }, icon('mail'), t('email')));
+      if (entity === 'Documents') actions.push(h('button', { class: 'btn primary', type: 'button', onclick: function () { downloadDocument(record); } }, icon('download'), t('download')));
+      if (entity === 'Leads' && can('LeadConversion', 'create') && ['CONVERTED', 'LOST', 'NOT_QUALIFIED'].indexOf(record.Status) === -1 && record.IsArchived !== true) {
+        actions.push(h('button', { class: 'btn gold', type: 'button', onclick: function () { openConvert(record); } }, icon('swap'), t('convertButton')));
+      }
+      if (can(entity, 'update') && record.IsArchived !== true) actions.push(h('button', { class: 'btn', type: 'button', onclick: function () { openForm({ entity: entity, record: record, labels: labels, onSaved: reload }); } }, icon('edit'), t('edit')));
+      if (can(entity, 'archive') && record.IsArchived !== true) {
+        var overflow = h('div', { class: 'menu', hidden: true }, h('button', { type: 'button', class: 'danger', onclick: function () { overflow.hidden = true; confirmArchive(entity, record); } }, icon('archive'), t('archive')));
+        actions.push(h('div', { style: 'position:relative' }, h('button', { class: 'btn icon-only', type: 'button', title: t('more'), onclick: function (event) { event.stopPropagation(); var open = overflow.hidden; closeMenus(); overflow.hidden = !open; } }, icon('more')), overflow));
+      }
+      var leading = ui.title === 'FullName' || ui.title === 'CompanyName' ? avatar(title, 'lg') : h('span', { class: 'tile-icon ' + (ui.tile || ''), style: 'width:56px;height:56px;border-radius:16px' }, icon(ui.icon));
+      var metaLine = h('div', { class: 'meta-line' }, statusControl(entity, record, reload), h('span', null, joinParts([entitySingular(entity)].concat(subParts(entity, record, labels)))));
+      root.appendChild(h('a', { class: 'back-link', style: 'margin-top:14px', onclick: function () { if (state.stack.length) goBack(); else navigate({ view: 'list', entity: entity }, true); } }, icon('back', 'flip'), state.stack.length ? t('back') : entityTitle(entity)));
+      root.appendChild(h('div', { class: 'card hero' }, leading, h('div', { class: 'titles' },
+        h('h1', { dir: 'auto', text: title }), metaLine,
+        record.IsArchived === true ? h('div', { class: 'alert warn', style: 'margin:12px 0 0', text: t('archivedOn', { date: friendlyDate(record.ArchivedAt) }) }) : null,
+        actions.length ? h('div', { class: 'actions' }, actions) : null)));
+
+      // Tabs
+      var tabs = [{ key: 'overview', label: t('overview') }];
+      Object.keys(data.related || {}).forEach(function (target) { tabs.push({ key: target, label: entityTitle(target), n: data.related[target].total }); });
+      if (data.memberships) tabs.push({ key: 'memberships', label: t('memberships'), n: data.memberships.length });
+      if (data.activities) tabs.push({ key: 'history', label: t('history') });
+      var current = route.tab && tabs.some(function (tab) { return tab.key === route.tab; }) ? route.tab : 'overview';
+      var tabBar = h('div', { class: 'tabs', role: 'tablist' });
+      var panel = h('div');
+      function drawTabs() {
+        clear(tabBar);
+        tabs.forEach(function (tab) {
+          tabBar.appendChild(h('button', { type: 'button', role: 'tab', class: 'tab' + (tab.key === current ? ' on' : ''), onclick: function () { current = tab.key; state.current.tab = tab.key; drawTabs(); drawPanel(); } },
+            tab.label, tab.n !== undefined ? h('span', { class: 'n', text: String(tab.n) }) : null));
+        });
+      }
+      function drawPanel() {
+        clear(panel);
+        if (current === 'overview') return panel.appendChild(overview());
+        if (current === 'history') return panel.appendChild(history());
+        if (current === 'memberships') return panel.appendChild(memberships());
+        return panel.appendChild(relatedPanel(current));
+      }
+      function overview() {
+        var main = h('div');
+        if (entity === 'Cases') append(main, moneyCard(record));
+        var facts = h('div', { class: 'facts' });
+        var shown = 0;
+        var empty = 0;
+        Object.keys(record).forEach(function (field) {
+          if (NEVER_SHOW.indexOf(field) !== -1 || field === formMeta(entity).idField || field === ui.title || field === ui.status) return;
+          if (entity === 'Cases' && ['AgreedFee', 'TotalPaid', 'OutstandingBalance'].indexOf(field) !== -1 && Number(record.AgreedFee) > 0) return;
+          if (blank(record[field])) { if (fieldMeta(entity, field)) empty += 1; return; }
+          var fm = fieldMeta(entity, field);
+          shown += 1;
+          facts.appendChild(h('div', { class: 'fact' + (fm && fm.type === 'longtext' ? ' wide' : '') },
+            h('div', { class: 'fact-label', text: fieldLabel(field) }), h('div', { class: 'fact-value' }, formatValue(entity, field, record, labels))));
+        });
+        var card = h('div', { class: 'card' }, shown ? facts : h('div', { class: 'faint', text: t('noDetailsYet') }));
+        if (empty && can(entity, 'update') && record.IsArchived !== true) {
+          card.appendChild(h('button', { class: 'btn ghost small add-details', type: 'button', onclick: function () { openForm({ entity: entity, record: record, labels: labels, onSaved: reload, expanded: true }); } }, icon('plus'), t('addDetails', { n: empty })));
+        }
+        var stamps = [];
+        if (record.CreatedAt) stamps.push(t('createdOn', { d: friendlyDate(record.CreatedAt) }));
+        if (record.UpdatedAt && record.UpdatedAt !== record.CreatedAt) stamps.push(t('updatedOn', { d: friendlyDate(record.UpdatedAt) }));
+        if (stamps.length) card.appendChild(h('div', { class: 'meta-foot', text: stamps.join(' · ') }));
+        main.appendChild(card);
+        if (!data.team) return main;
+        return h('div', { class: 'detail-grid' }, main, h('div', null, teamCard(entity, route.id, data.team)));
+      }
+      function relatedPanel(target) {
+        var rel = data.related[target];
+        var wrap = h('div');
+        var addButton = null;
+        if (can(target, 'create') && record.IsArchived !== true && entity !== 'Users') {
+          addButton = h('button', { class: 'btn primary small', type: 'button', onclick: function () {
+            var presets = RELATED_PRESETS[target] ? RELATED_PRESETS[target](record, rel.linkField, entity) : {};
+            if (!RELATED_PRESETS[target] || !presets[rel.linkField]) presets[rel.linkField] = recordId(entity, record);
+            if (rel.entityType) presets.EntityType = rel.entityType;
+            var presetLabels = Object.assign({}, labels);
+            presetLabels[recordId(entity, record)] = title;
+            startCreate(target, presets, presetLabels, reload);
+          } }, icon(target === 'Documents' ? 'upload' : 'plus'), target === 'Documents' ? t('uploadDocument') : t('newRecord', { x: lower(entitySingular(target)) }));
+        }
+        if (addButton) wrap.appendChild(h('div', { style: 'display:flex;justify-content:flex-end;margin-bottom:12px' }, addButton));
+        var cols = ENTITY_UI[target].cols.filter(function (column) { return column !== rel.linkField && !(rel.entityType && column === 'EntityType'); }).slice(0, 3);
+        wrap.appendChild(h('div', { class: 'rows' }, rel.records.length
+          ? recordRows(target, rel.records, labels, { cols: cols, onChange: reload })
+          : emptyState(ENTITY_UI[target].icon, t('noneYetTitle', { x: lower(entityTitle(target)) }), null)));
+        return wrap;
+      }
+      function memberships() {
+        return h('div', { class: 'rows' }, data.memberships.length ? data.memberships.map(function (row) {
+          return h('div', { class: 'row', style: 'grid-template-columns:minmax(0,1fr) auto 20px', onclick: function () { navigate({ view: 'detail', entity: row.EntityType, id: row.EntityID }); } },
+            h('div', { class: 'lead-cell' }, h('span', { class: 'tile-icon' }, icon(ENTITY_UI[row.EntityType].icon)), h('div', { class: 'primary', dir: 'auto', text: labels[row.EntityID] || row.EntityID })),
+            h('span', { class: 'pill plain', text: entitySingular(row.EntityType) }), icon('chevron', 'chev flip'));
+        }) : emptyState('users', t('noMemberships'), null));
+      }
+      function history() {
+        return h('div', { class: 'card' }, data.activities.length ? h('ul', { class: 'timeline' }, data.activities.map(function (activity) {
+          var description = state.lang === 'ar' ? ((I.actions.ar || {})[activity.Action] || activity.Description) : activity.Description;
+          return h('li', null, h('div', { dir: 'auto', text: description }),
+            h('div', { class: 'meta', dir: 'auto', text: friendlyDate(activity.Timestamp, true) + ' · ' + (labels[activity.PerformedBy] || userName(activity.PerformedBy) || t('system')) }));
+        })) : h('div', { class: 'faint', text: t('noHistory') }));
+      }
+      if (tabs.length > 1) root.appendChild(tabBar);
+      root.appendChild(panel);
+      drawTabs();
+      drawPanel();
+    }).catch(function (error) { content(); root404(error); });
+  }
+  function root404(error) {
+    var root = content();
+    root.appendChild(h('a', { class: 'back-link', style: 'margin-top:14px', onclick: goBack }, icon('back', 'flip'), t('back')));
+    root.appendChild(h('div', { class: 'card' }, emptyState('search', error && error.code === 'NOT_FOUND' ? t('notFoundTitle') : t('somethingWrong'), errorMessage(error))));
+  }
+
+  // ------------------------------------------------------------ Modal
+  function openModal(title, body, footerButtons) {
+    $('modal-title').textContent = title;
+    append(clear($('modal-body')), body);
+    append(clear($('modal-footer')), footerButtons);
+    $('modal-backdrop').hidden = false;
+    var first = $('modal-body').querySelector('input:not([type=checkbox]):not([type=file]):not([readonly]), select, textarea');
+    if (first) setTimeout(function () { first.focus(); }, 30);
+  }
+  function closeModal() { $('modal-backdrop').hidden = true; clear($('modal-body')); clear($('modal-footer')); }
+
+  function confirmDialog(title, message, confirmLabel, onConfirm) {
+    var button = h('button', { class: 'btn primary', type: 'button', text: confirmLabel });
+    var alertBox = h('div');
+    button.addEventListener('click', function () {
+      button.disabled = true;
+      Promise.resolve(onConfirm()).then(closeModal).catch(function (error) {
+        button.disabled = false;
+        clear(alertBox).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) }));
+      });
+    });
+    openModal(title, [alertBox, h('p', { dir: 'auto', class: 'muted', text: message })], [h('button', { class: 'btn ghost', type: 'button', text: t('cancel'), onclick: closeModal }), button]);
+  }
+
+  function confirmArchive(entity, record) {
+    confirmDialog(t('archiveTitle', { x: lower(entitySingular(entity)) }), t('archiveConfirm', { x: recordLabel(entity, record) }), t('archive'), function () {
+      return call('apiArchive', entity, recordId(entity, record), record.Version).then(function () {
+        toast(t('archivedToast', { x: entitySingular(entity) }));
+        state.stack = [];
+        navigate({ view: 'list', entity: entity }, true);
+      });
+    });
+  }
+
+  // ------------------------------------------------------------ Form controls
+  function pickerControl(target, initialValue, initialLabel) {
+    var value = initialValue || '';
+    var wrap = h('div', { class: 'picker' });
+    var canSearch = target && can(target, 'read');
+    function renderSelected() {
+      clear(wrap);
+      if (!value) { renderSearch(); return; }
+      wrap.appendChild(h('div', { class: 'picker-selected' },
+        h('input', { class: 'input', readonly: true, value: initialLabel || value, dir: 'auto' }),
+        h('button', { class: 'icon-button', type: 'button', title: t('clear'), onclick: function () { value = ''; initialLabel = ''; renderSearch(); } }, icon('x'))));
+    }
+    function renderSearch() {
+      clear(wrap);
+      if (!canSearch) { wrap.appendChild(h('input', { class: 'input', disabled: true, value: target ? t('noAccess', { x: entityTitle(target) }) : t('chooseLinkType') })); return; }
+      var input = h('input', { class: 'input', type: 'search', placeholder: t('typeToFind', { x: lower(entitySingular(target)) }), dir: 'auto' });
+      var results = h('div', { class: 'picker-results', hidden: true });
+      var timer = null;
+      var seq = 0;
+      input.addEventListener('input', function () {
+        clearTimeout(timer);
+        var query = input.value.trim();
+        if (!query) { results.hidden = true; return; }
+        timer = setTimeout(function () {
+          var mine = ++seq;
+          call('apiList', target, { query: query, limit: 8 }).then(function (list) {
+            if (mine !== seq) return;
+            clear(results);
+            results.hidden = false;
+            if (!list.records.length) { results.appendChild(h('div', { class: 'search-empty', text: t('noMatches') })); return; }
+            list.records.forEach(function (record) {
+              var label = recordLabel(target, record);
+              var extra = record.Phone || record.Email || record.CaseNumber || '';
+              results.appendChild(h('button', { type: 'button', dir: 'auto', onclick: function () { value = recordId(target, record); initialLabel = label; renderSelected(); } },
+                label, extra ? h('span', { class: 'faint', style: 'margin-inline-start:8px', text: extra }) : null));
+            });
+          }).catch(function (error) { clear(results); results.hidden = false; results.appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+        }, 220);
+      });
+      wrap.appendChild(input);
+      wrap.appendChild(results);
+    }
+    renderSelected();
+    return { el: wrap, getValue: function () { return value; } };
+  }
+
+  function buildControl(entity, field, record, labels, onChange, locked) {
+    var type = field.type;
+    var name = field.name;
+    var value = record[name];
+    var el;
+    if (type === 'enum') {
+      var options = field.options.slice();
+      if (!blank(value) && options.indexOf(value) === -1) options.unshift(value);
+      el = h('select', { class: 'input', disabled: locked || (entity === 'Leads' && name === 'Status' && value === 'CONVERTED') },
+        h('option', { value: '', text: field.required ? t('choose') : '—' }),
+        options.map(function (option) { return h('option', { value: option, text: enumLabel(option), selected: option === value }); }));
+      if (onChange) el.addEventListener('change', onChange);
+      return { el: el, getValue: function () { return el.value; } };
+    }
+    if (type === 'reference' && field.ref === 'Users') {
+      var users = state.boot.users.slice();
+      if (!blank(value) && !users.some(function (user) { return user.UserID === value; })) users.unshift({ UserID: value, FullName: labels[value] || value });
+      el = h('select', { class: 'input', disabled: locked }, h('option', { value: '', text: t('nobody') }),
+        users.map(function (user) { return h('option', { value: user.UserID, text: user.FullName + (user.Role ? ' · ' + enumLabel(user.Role) : ''), selected: user.UserID === value }); }));
+      return { el: el, getValue: function () { return el.value; } };
+    }
+    if (type === 'reference') return pickerControl(field.ref, value, labels[value]);
+    if (type === 'longtext') {
+      el = h('textarea', { class: 'input', dir: 'auto' });
+      el.value = blank(value) ? '' : String(value);
+      return { el: el, getValue: function () { return el.value.trim(); } };
+    }
+    var inputType = { number: 'number', date: 'date', datetime: 'datetime-local', email: 'email', phone: 'tel' }[type] || 'text';
+    var initial = blank(value) ? '' : type === 'date' ? String(value).slice(0, 10) : type === 'datetime' ? String(value).slice(0, 16) : String(value);
+    el = h('input', { class: 'input', type: inputType, step: type === 'number' ? 'any' : null, min: type === 'number' ? '0' : null, dir: inputType === 'text' ? 'auto' : (inputType === 'tel' || inputType === 'email' ? 'ltr' : null), value: initial, disabled: locked });
+    return { el: el, getValue: function () { var v = el.value.trim(); return type === 'number' && v !== '' ? Number(v) : v; } };
+  }
+
+  function comparable(field, value) {
+    if (blank(value)) return '';
+    if (field.type === 'date') return String(value).slice(0, 10);
+    if (field.type === 'datetime') return String(value).slice(0, 16);
+    if (field.type === 'number') return String(Number(value));
+    return String(value);
+  }
+
+  function duplicateAlert(error, onConfirm) {
+    var list = (error.duplicates || []).map(function (match) {
+      return h('li', { dir: 'auto', text: match.hidden ? t('dupHidden') : [match.fullName, match.phone, match.email].filter(Boolean).join(' · ') });
+    });
+    return h('div', { class: 'alert warn' },
+      h('strong', { text: error.code === 'DUPLICATE_USER' ? t('dupUser') : t('dupFound') }),
+      h('ul', null, list),
+      error.code === 'DUPLICATE' ? h('div', { style: 'margin-top:10px' }, h('button', { class: 'btn small', type: 'button', text: t('dupConfirm'), onclick: onConfirm })) : null);
+  }
+
+  /** Short form: essentials first, everything else behind "More details". */
+  function openForm(options) {
+    var entity = options.entity;
+    var meta = formMeta(entity);
+    var ui = ENTITY_UI[entity];
+    var record = options.record || {};
+    var isEdit = !!options.record;
+    var defaults = {};
+    if (!isEdit) meta.fields.forEach(function (field) { if (field.defaultValue !== null && field.defaultValue !== undefined) defaults[field.name] = field.defaultValue; });
+    if (!isEdit && entity === 'FollowUps' && !defaults.DueDate) defaults.DueDate = state.today;
+    if (!isEdit && (entity === 'FollowUps' || entity === 'Leads') && state.boot.restricted && !(options.presets || {}).AssignedTo) defaults.AssignedTo = state.boot.userId;
+    var values = Object.assign(defaults, record, options.presets || {});
+    var labels = Object.assign({}, options.labels || {});
+    var alertBox = h('div');
+    var grid = h('div', { class: 'form-grid' });
+    var extra = h('div', { class: 'form-grid', style: 'grid-column:1/-1', hidden: !options.expanded });
+    var controls = {};
+    var holders = {};
+    var essentials = ui.essentials || meta.fields.map(function (field) { return field.name; });
+    var presetKeys = Object.keys(options.presets || {});
+    function isEssential(field) {
+      return field.required || essentials.indexOf(field.name) !== -1 || presetKeys.indexOf(field.name) !== -1 || (isEdit && !blank(record[field.name]));
+    }
+    var ordered = meta.fields.slice().sort(function (a, b) {
+      var ia = essentials.indexOf(a.name); var ib = essentials.indexOf(b.name);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+    var hiddenCount = 0;
+    function refreshConditions() {
+      Object.keys(SHOW_IF).forEach(function (name) {
+        if (!holders[name]) return;
+        var current = {};
+        Object.keys(controls).forEach(function (key) { current[key] = controls[key].getValue(); });
+        holders[name].hidden = !SHOW_IF[name](current);
+      });
+    }
+    ordered.forEach(function (field) {
+      var holder = h('div', { class: 'form-field' + (field.type === 'longtext' ? ' wide' : '') });
+      holder.appendChild(h('label', null, fieldLabel(field.name), field.required ? h('span', { class: 'req', text: ' *' }) : null));
+      if (field.type === 'entityReference') {
+        var picker = pickerControl(DOC_TARGETS[values.EntityType], values.EntityID, labels[values.EntityID]);
+        controls[field.name] = picker;
+        holder.appendChild(picker.el);
+      } else {
+        var onChange = field.name === 'ClientType' ? refreshConditions : field.name === 'EntityType' ? function () {
+          var replacement = pickerControl(DOC_TARGETS[controls.EntityType.getValue()], '', '');
+          holders.EntityID.replaceChild(replacement.el, controls.EntityID.el);
+          controls.EntityID = replacement;
+        } : null;
+        var control = buildControl(entity, field, values, labels, onChange, isEdit && field.lockedOnEdit);
+        controls[field.name] = control;
+        holder.appendChild(control.el);
+      }
+      holders[field.name] = holder;
+      if (isEssential(field) || options.expanded) grid.appendChild(holder);
+      else { extra.appendChild(holder); hiddenCount += 1; }
+    });
+    if (hiddenCount && !options.expanded) {
+      var toggle = h('button', { class: 'more-toggle', type: 'button' }, icon('down'), t('moreDetails', { n: hiddenCount }));
+      toggle.addEventListener('click', function () { extra.hidden = !extra.hidden; toggle.classList.toggle('open', !extra.hidden); });
+      grid.appendChild(toggle);
+      grid.appendChild(extra);
+    }
+    refreshConditions();
+
+    var save = h('button', { class: 'btn primary', type: 'button', text: isEdit ? t('saveChanges') : t('create') });
+    function collect() {
+      var payload = {};
+      var missing = [];
+      meta.fields.forEach(function (field) {
+        if (holders[field.name] && holders[field.name].hidden && SHOW_IF[field.name]) return;
+        var value = controls[field.name].getValue();
+        if (field.required && blank(value)) missing.push(fieldLabel(field.name));
+        if (isEdit) { if (!field.lockedOnEdit && comparable(field, value) !== comparable(field, record[field.name])) payload[field.name] = value; }
+        else if (!blank(value)) payload[field.name] = value;
+      });
+      return { payload: payload, missing: missing };
+    }
+    function submit(confirmDuplicate) {
+      var collected = collect();
+      clear(alertBox);
+      if (collected.missing.length) { alertBox.appendChild(h('div', { class: 'alert danger', text: t('requiredFields', { x: collected.missing.join(state.lang === 'ar' ? '، ' : ', ') }) })); return; }
+      if (isEdit && !Object.keys(collected.payload).length) { closeModal(); return; }
+      if (confirmDuplicate) collected.payload.confirmDuplicate = true;
+      save.disabled = true;
+      var request = isEdit ? call('apiUpdate', entity, recordId(entity, record), collected.payload, record.Version) : call('apiCreate', entity, collected.payload);
+      request.then(function (saved) {
+        closeModal();
+        toast(t(isEdit ? 'updatedToast' : 'createdToast', { x: entitySingular(entity) }));
+        if (options.onSaved) options.onSaved(saved);
+      }).catch(function (error) {
+        save.disabled = false;
+        if (error.code === 'DUPLICATE' || error.code === 'DUPLICATE_USER') alertBox.appendChild(duplicateAlert(error, function () { submit(true); }));
+        else alertBox.appendChild(h('div', { class: 'alert danger', text: errorMessage(error) }));
+        $('modal-body').scrollTop = 0;
+      });
+    }
+    save.addEventListener('click', function () { submit(false); });
+    grid.addEventListener('keydown', function (event) { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) submit(false); });
+    openModal(t(isEdit ? 'editTitle' : 'newTitle', { x: lower(entitySingular(entity)) }), [alertBox, grid],
+      [h('button', { class: 'btn ghost', type: 'button', text: t('cancel'), onclick: closeModal }), save]);
+  }
+
+  function openConvert(lead) {
+    var alertBox = h('div');
+    var fields = ['Email', 'Phone', 'Address', 'Nationality'];
+    var inputs = {};
+    var grid = h('div', { class: 'form-grid' }, fields.map(function (field) {
+      var input = field === 'Address' ? h('textarea', { class: 'input', dir: 'auto' }) : h('input', { class: 'input', type: field === 'Email' ? 'email' : field === 'Phone' ? 'tel' : 'text', dir: field === 'Email' || field === 'Phone' ? 'ltr' : 'auto' });
+      input.value = lead[field] || '';
+      inputs[field] = input;
+      return h('div', { class: 'form-field' + (field === 'Address' ? ' wide' : '') }, h('label', { text: fieldLabel(field) }), input);
+    }));
+    var intro = h('p', { class: 'muted', style: 'margin-top:0' }, h('strong', { dir: 'auto', style: 'color:var(--text)', text: lead.FullName }), t('convertIntroAfter'));
+    var button = h('button', { class: 'btn gold', type: 'button', text: t('convert') });
+    function submit(confirmDuplicate) {
+      var input = {};
+      fields.forEach(function (field) { var v = inputs[field].value.trim(); if (v) input[field] = v; });
+      if (confirmDuplicate) input.confirmDuplicate = true;
+      clear(alertBox);
+      button.disabled = true;
+      call('apiConvertLead', lead.LeadID, lead.Version, input).then(function (result) {
+        closeModal();
+        toast(t('convertedToast'));
+        navigate({ view: 'detail', entity: 'Clients', id: result.client.ClientID });
+      }).catch(function (error) {
+        button.disabled = false;
+        if (error.code === 'DUPLICATE') alertBox.appendChild(duplicateAlert(error, function () { submit(true); }));
+        else alertBox.appendChild(h('div', { class: 'alert danger', text: errorMessage(error) }));
+      });
+    }
+    button.addEventListener('click', function () { submit(false); });
+    openModal(t('convertTitle'), [alertBox, intro, grid], [h('button', { class: 'btn ghost', type: 'button', text: t('cancel'), onclick: closeModal }), button]);
+  }
+
+  // ------------------------------------------------------------ Documents
+  function base64ToBytes(base64) {
+    var binary = atob(base64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  function downloadDocument(record) {
+    toast(t('downloading'));
+    call('apiDownloadDocument', record.DocumentID).then(function (file) {
+      var url = URL.createObjectURL(new Blob([base64ToBytes(file.base64)], { type: file.mimeType || 'application/octet-stream' }));
+      var link = h('a', { href: url, download: file.fileName, style: 'display:none' });
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+    }).catch(function (error) { toast(errorMessage(error), true); });
+  }
+
+  /** Drag-and-drop (or browse) upload; the server keeps the file in the private documents folder. */
+  function openUpload(options) {
+    options = options || {};
+    var presets = options.presets || {};
+    var labels = options.labels || {};
+    var limits = state.boot.upload;
+    var mb = Math.round(limits.maxBytes / 1048576);
+    var alertBox = h('div');
+    var chosen = null;
+    var fileInput = h('input', { type: 'file', hidden: true, accept: limits.extensions.map(function (ext) { return '.' + ext; }).join(',') });
+    var fileName = h('div', { class: 'file-name', dir: 'auto' });
+    var drop = h('div', { class: 'dropzone', role: 'button', tabindex: '0' }, h('div', { class: 'tile-icon meet' }, icon('upload')),
+      h('div', { style: 'font-weight:500', text: t('dropHere') }), h('div', { class: 'faint', style: 'font-size:12.5px;margin-top:4px', text: t('fileHelp', { mb: mb }) }), fileName, fileInput);
+    function choose(file) {
+      clear(alertBox);
+      if (!file) return;
+      var ext = (file.name.match(/\.([A-Za-z0-9]+)$/) || [])[1];
+      if (!ext || limits.extensions.indexOf(ext.toLowerCase()) === -1) { chosen = null; fileName.textContent = ''; return fail(t('badType')); }
+      if (file.size > limits.maxBytes) { chosen = null; fileName.textContent = ''; return fail(t('tooLarge', { mb: mb })); }
+      chosen = file;
+      fileName.textContent = file.name;
+    }
+    drop.addEventListener('click', function () { fileInput.click(); });
+    drop.addEventListener('keydown', function (event) { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); fileInput.click(); } });
+    fileInput.addEventListener('change', function () { choose(fileInput.files && fileInput.files[0]); });
+    ['dragenter', 'dragover'].forEach(function (name) { drop.addEventListener(name, function (event) { event.preventDefault(); drop.classList.add('over'); }); });
+    ['dragleave', 'drop'].forEach(function (name) { drop.addEventListener(name, function (event) { event.preventDefault(); drop.classList.remove('over'); }); });
+    drop.addEventListener('drop', function (event) { choose(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]); });
+
+    var grid = h('div', { class: 'form-grid' }, h('div', { class: 'form-field wide' }, drop));
+    var typeControl = null;
+    var picker = null;
+    if (presets.EntityType && presets.EntityID) {
+      grid.appendChild(h('div', { class: 'form-field wide' }, h('label', { text: t('attachTo') }),
+        h('div', { class: 'picker-selected' }, h('input', { class: 'input', readonly: true, dir: 'auto', value: entitySingular(DOC_TARGETS[presets.EntityType]) + ' · ' + (labels[presets.EntityID] || presets.EntityID) }))));
+    } else {
+      typeControl = h('select', { class: 'input' }, h('option', { value: '', text: t('choose') }), Object.keys(DOC_TARGETS).map(function (key) { return h('option', { value: key, text: enumLabel(key) }); }));
+      var pickerHolder = h('div', { class: 'form-field' }, h('label', null, t('whichOne'), h('span', { class: 'req', text: ' *' })));
+      picker = pickerControl(null, '', '');
+      pickerHolder.appendChild(picker.el);
+      typeControl.addEventListener('change', function () {
+        var replacement = pickerControl(DOC_TARGETS[typeControl.value], '', '');
+        pickerHolder.replaceChild(replacement.el, picker.el);
+        picker = replacement;
+      });
+      grid.appendChild(h('div', { class: 'form-field' }, h('label', null, t('attachTo'), h('span', { class: 'req', text: ' *' })), typeControl));
+      grid.appendChild(pickerHolder);
+    }
+    var levels = (fieldMeta('Documents', 'ConfidentialityLevel') || { options: ['STANDARD'] }).options;
+    var level = h('select', { class: 'input' }, levels.map(function (option) { return h('option', { value: option, text: enumLabel(option), selected: option === (levels.indexOf('CONFIDENTIAL') !== -1 ? 'CONFIDENTIAL' : levels[0]) }); }));
+    grid.appendChild(h('div', { class: 'form-field' }, h('label', { text: fieldLabel('ConfidentialityLevel') }), level));
+    var description = h('input', { class: 'input', dir: 'auto', placeholder: t('optional') });
+    grid.appendChild(h('div', { class: 'form-field' }, h('label', { text: fieldLabel('Description') }), description));
+
+    var button = h('button', { class: 'btn primary', type: 'button' }, icon('upload'), t('upload'));
+    function fail(message) { clear(alertBox).appendChild(h('div', { class: 'alert danger', text: message })); }
+    button.addEventListener('click', function () {
+      if (!chosen) return fail(t('chooseFileFirst'));
+      var meta = { ConfidentialityLevel: level.value, Description: description.value.trim() };
+      meta.EntityType = presets.EntityType || (typeControl && typeControl.value);
+      meta.EntityID = presets.EntityID || (picker && picker.getValue());
+      if (!meta.EntityType || !meta.EntityID) return fail(t('requiredFields', { x: t('attachTo') }));
+      button.disabled = true;
+      var reader = new FileReader();
+      reader.onerror = function () { button.disabled = false; fail(t('somethingWrong')); };
+      reader.onload = function () {
+        call('apiUploadDocument', meta, { name: chosen.name, base64: String(reader.result).split(',')[1] || '' }).then(function (saved) {
+          closeModal();
+          toast(t('uploadedToast'));
+          if (options.onSaved) options.onSaved(saved);
+        }).catch(function (error) { button.disabled = false; fail(errorMessage(error)); });
+      };
+      reader.readAsDataURL(chosen);
+    });
+    openModal(t('uploadDocument'), [alertBox, grid], [h('button', { class: 'btn ghost', type: 'button', text: t('cancel'), onclick: closeModal }), button]);
+  }
+
+  // ------------------------------------------------------------ Settings
+  function showSettings() {
+    var root = content();
+    root.appendChild(pageHead(t('navSettings'), t('settingsSub')));
+    var grid = h('div', { class: 'settings-grid' });
+    root.appendChild(grid);
+
+    // Personal preferences — everyone.
+    var langRow = h('div', { class: 'lang-choice' });
+    [['EN', 'English'], ['AR', 'العربية']].forEach(function (pair) {
+      langRow.appendChild(h('button', { class: 'btn' + (state.lang === pair[0].toLowerCase() ? ' on' : ''), type: 'button', text: pair[1], onclick: function () { setLanguage(pair[0]); } }));
+    });
+    grid.appendChild(h('div', { class: 'card' }, h('div', { class: 'card-title', text: t('yourPreferences') }),
+      h('div', { class: 'fact-label', text: t('language') }), langRow,
+      h('div', { class: 'fact-label', style: 'margin-top:16px', text: t('remindersTitle') }),
+      h('p', { text: t('reminderPersonal') }),
+      h('button', { class: 'btn small', type: 'button', onclick: previewReminder }, icon('mail'), t('previewReminder'))));
+
+    // Owner reminder switch.
+    if (can('Settings', 'update')) {
+      var reminderCard = h('div', { class: 'card' }, h('div', { class: 'card-title' }, icon('bell'), t('remindersTitle')), h('p', { text: t('remindersNote') }));
+      var switchRow = h('label', { class: 'switch' });
+      var status = h('span', { class: 'muted', text: t('loading') });
+      var input = h('input', { type: 'checkbox', disabled: true });
+      switchRow.appendChild(input);
+      switchRow.appendChild(status);
+      reminderCard.appendChild(switchRow);
+      reminderCard.appendChild(h('button', { class: 'btn small', type: 'button', style: 'margin-top:10px', onclick: function () {
+        call('apiSendRemindersNow').then(function (result) { toast(t('sentN', { n: result.sent })); }).catch(function (error) { toast(errorMessage(error), true); });
+      } }, t('sendNow')));
+      var drawStatus = function (info) { input.disabled = false; input.checked = info.enabled; status.textContent = info.enabled ? t('remindersOn', { h: info.hour }) : t('remindersOff'); };
+      input.addEventListener('change', function () {
+        input.disabled = true;
+        call('apiSetDailyReminders', input.checked).then(drawStatus).catch(function (error) { input.checked = !input.checked; input.disabled = false; toast(errorMessage(error), true); });
+      });
+      call('apiGetReminderStatus').then(drawStatus).catch(function (error) { status.textContent = errorMessage(error); });
+      grid.appendChild(reminderCard);
+    }
+
+    var firmHolder = h('div', { class: 'card', style: 'grid-column:1/-1' }, h('div', { class: 'loading', text: t('loading') }));
+    grid.appendChild(firmHolder);
+    call('apiGetSettings').then(function (settings) {
+      clear(firmHolder);
+      var editable = can('Settings', 'update');
+      var byKey = {};
+      settings.forEach(function (setting) { byKey[setting.key] = setting; });
+      firmHolder.appendChild(h('div', { class: 'card-title', text: t('firmSettings') }));
+      var form = h('div', { class: 'form-grid' });
+      var saveSetting = function (key, value, button) {
+        button.disabled = true;
+        call('apiUpdateSetting', key, value, byKey[key].version).then(function () {
+          toast(t('settingSaved'));
+          return call('apiGetAppBootstrap').then(function (boot) { state.boot = boot; showSettings(); });
+        }).catch(function (error) { button.disabled = false; toast(errorMessage(error), true); });
+      };
+      if (byKey.BUSINESS_NAME) {
+        var nameInput = h('input', { class: 'input', value: byKey.BUSINESS_NAME.value, dir: 'auto', disabled: !editable });
+        var nameSave = h('button', { class: 'btn small', type: 'button', text: t('save'), hidden: !editable, onclick: function () { saveSetting('BUSINESS_NAME', nameInput.value.trim(), nameSave); } });
+        form.appendChild(h('div', { class: 'form-field' }, h('label', { text: settingLabel('BUSINESS_NAME') }), h('div', { class: 'team-add', style: 'margin:0' }, nameInput, nameSave)));
+      }
+      if (byKey.NOTIFICATION_PREFERENCES) {
+        var prefs = byKey.NOTIFICATION_PREFERENCES.value || {};
+        var boxes = {};
+        var prefHolder = h('div', { class: 'form-field' }, h('label', { text: settingLabel('NOTIFICATION_PREFERENCES') }));
+        Object.keys(prefs).forEach(function (key) {
+          boxes[key] = h('input', { type: 'checkbox', checked: prefs[key] === true, disabled: !editable });
+          boxes[key].addEventListener('change', function () {
+            var next = {};
+            Object.keys(boxes).forEach(function (name) { next[name] = boxes[name].checked; });
+            saveSetting('NOTIFICATION_PREFERENCES', next, boxes[key]);
+          });
+          prefHolder.appendChild(h('label', { class: 'switch' }, boxes[key], h('span', { text: settingLabel(key) })));
+        });
+        form.appendChild(prefHolder);
+      }
+      if (byKey.PRACTICE_AREAS) {
+        var area = h('textarea', { class: 'input', dir: 'ltr', disabled: !editable });
+        area.value = (byKey.PRACTICE_AREAS.value || []).join('\n');
+        var areaSave = h('button', { class: 'btn small', type: 'button', style: 'margin-top:8px', text: t('save'), hidden: !editable, onclick: function () {
+          saveSetting('PRACTICE_AREAS', area.value.split('\n').map(function (line) { return line.trim(); }).filter(Boolean), areaSave);
+        } });
+        form.appendChild(h('div', { class: 'form-field wide' }, h('label', { text: settingLabel('PRACTICE_AREAS') }),
+          h('div', { class: 'faint', style: 'font-size:12.5px;margin-bottom:6px', text: t('practiceHelp') }), area, areaSave));
+      }
+      firmHolder.appendChild(form);
+      var fixed = settings.filter(function (setting) { return !setting.editable || setting.key === 'FUTURE_INTEGRATIONS_ENABLED'; });
+      if (fixed.length) {
+        var list = h('dl', { class: 'kv' });
+        fixed.forEach(function (setting) {
+          var value = setting.value;
+          var shown = Array.isArray(value) ? value.map(enumLabel).join(state.lang === 'ar' ? '، ' : ', ') : typeof value === 'boolean' ? (value ? t('yes') : t('no')) : String(value);
+          list.appendChild(h('dt', { text: settingLabel(setting.key) }));
+          list.appendChild(h('dd', { dir: 'auto', text: shown }));
+        });
+        firmHolder.appendChild(h('details', { class: 'system' }, h('summary', { text: t('systemValues') }), list));
+      }
+    }).catch(function (error) { clear(firmHolder).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+  }
+
+  function previewReminder() {
+    call('apiPreviewMyReminder').then(function (digest) {
+      openModal(t('previewReminder'), digest
+        ? [h('div', { class: 'fact-label', dir: 'auto', style: 'margin-bottom:8px', text: digest.subject }), h('pre', { class: 'digest', dir: digest.language === 'AR' ? 'rtl' : 'ltr', text: digest.text })]
+        : emptyState('sun', t('allClear'), t('nothingForYou')),
+        [h('button', { class: 'btn primary', type: 'button', text: t('close'), onclick: closeModal })]);
+    }).catch(function (error) { toast(errorMessage(error), true); });
+  }
+
+  function setLanguage(code) {
+    applyLanguage(code);
+    if (state.current) render();
+    call('apiSetMyLanguage', code).catch(function (error) { toast(errorMessage(error), true); });
+  }
+
+  // ------------------------------------------------------------ Startup
+  $('modal-close').appendChild(icon('x'));
+  $('menu-toggle').appendChild(icon('menu'));
+  $('modal-close').addEventListener('click', closeModal);
+  $('modal-backdrop').addEventListener('click', function (event) { if (event.target === $('modal-backdrop')) closeModal(); });
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') { if (!$('modal-backdrop').hidden) closeModal(); closeMenus(); } });
+  document.addEventListener('click', closeMenus);
+  $('menu-toggle').addEventListener('click', openDrawer);
+  $('scrim').addEventListener('click', closeDrawer);
+  $('lang-toggle').addEventListener('click', function () { setLanguage(state.lang === 'ar' ? 'EN' : 'AR'); });
+  window.addEventListener('scroll', function () { document.querySelector('.topbar').classList.toggle('scrolled', window.scrollY > 4); });
+  setupSearch();
+
+  call('apiGetAppBootstrap').then(function (boot) {
+    state.boot = boot;
+    applyLanguage(boot.language);
+    // window.__MP_START__ is only ever set by tools/preview-server.js.
+    var start = window.__MP_START__ || null;
+    navigate(start && start.route ? start.route : { view: 'home' }, true);
+    if (start && start.form) openForm({ entity: start.form, record: start.record || null, labels: {} });
+    if (start && start.convert) openConvert(start.convert);
+    if (start && start.upload) openUpload({});
+  }).catch(function (error) {
+    content();
+    showError(error);
+  });
+})();
+</script>

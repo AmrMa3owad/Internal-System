@@ -1,0 +1,191 @@
+<script>
+/**
+ * English / Arabic interface text. App.html reads window.MP_I18N.
+ * Keys use {name} placeholders. Anything missing in Arabic falls back to English.
+ */
+window.MP_I18N = {
+  ui: {
+    en: {
+      loading: 'Loading…', back: 'Back', edit: 'Edit', archive: 'Archive', cancel: 'Cancel', create: 'Save', saveChanges: 'Save changes', save: 'Save',
+      clear: 'Clear', convert: 'Convert', yes: 'Yes', no: 'No', close: 'Close', add: 'Add', remove: 'Remove', archived: 'Archived', optional: 'Optional',
+      navHome: 'Today', navSettings: 'Settings', more: 'More', new: 'New', brandTag: 'Legal practice', searchEverything: 'Search people, cases, phone numbers…',
+      languageToggle: 'العربية', noResultsFor: 'Nothing matches "{q}".', system: 'System', somethingWrong: 'Something went wrong. Please try again.',
+      today: 'Today', tomorrow: 'Tomorrow', yesterday: 'Yesterday', inDays: 'In {n} days', overdueDays: '{n}d overdue',
+      goodMorning: 'Good morning, {name}', goodAfternoon: 'Good afternoon, {name}', goodEvening: 'Good evening, {name}',
+      yourDay: 'Your day', mine: 'Mine', everyone: 'Everyone', allClear: "You're all caught up", allClearText: 'Nothing needs you right now. Enjoy the calm.',
+      nothingToday: 'Nothing due today or tomorrow.', comingUp: 'Coming up', taskDone: 'Nice — task done.', markDone: 'Mark as done', call: 'Call',
+      consultation: 'Consultation', consultationOn: 'Consultation · {d}', deadline: 'Deadline', callBack: 'Call back',
+      openCases: 'Open cases', assignedToYou: '{n} assigned to you', openTasks: 'Open tasks', overdueN: '{n} overdue', noneOverdue: 'None overdue',
+      openLeads: 'Open leads', unassignedN: '{n} waiting for an assignee', newThisMonth: '{n} new this month', consultationsWeek: 'Consultations this week',
+      scheduled: 'Scheduled', incomeThisMonth: 'Income this month', expenses: 'Expenses {x}', outstanding: 'Fees still due', acrossOpen: 'Across open cases',
+      pipeline: 'Lead pipeline', newRecord: 'New {x}', newTitle: 'New {x}', editTitle: 'Edit {x}', uploadDocument: 'Upload document', upload: 'Upload',
+      searchIn: 'Search {x}', all: 'All', showArchived: 'Show archived', restrictedNote: 'You see the records assigned to you and your teams.',
+      asMain: 'as main assignee', asTeam: 'as team member', assign: 'Assign', assignTo: 'Assign to', assignedN: 'Assigned {n} record(s).',
+      assignFailedN: '{n} could not be assigned.', selectedN: '{n} selected', countOf: '{n} in total', noMatchesTitle: 'No matches',
+      noMatchesText: 'Try a different word or clear the filters.', emptyTitle: 'No {x} yet', emptyText: 'Everything you add will appear here.',
+      showingOf: 'Showing {n} of {total}', loadMore: 'Show more', team: 'Team', mainAssignee: 'Main assignee', notAssigned: 'Not assigned yet',
+      teamMembers: 'Also working on this', noMembers: 'Nobody else yet.', memberRemoved: 'Removed from the team.', memberAdded: 'Added to the team.',
+      teamHelp: 'Everyone listed can see this record and everything linked to it.', changeStatus: 'Change status', statusChanged: 'Status changed to {x}.',
+      paidSoFar: 'Paid so far', agreedFee: 'Agreed fee', remaining: '{x} remaining · {p}% paid', overpaid: 'Overpaid by {x}', fullyPaid: 'Fully paid',
+      email: 'Email', download: 'Download', convertButton: 'Make client', archivedOn: 'Archived {date}. It is kept for history.',
+      overview: 'Overview', memberships: 'Assigned to', history: 'History', noDetailsYet: 'No details yet.', addDetails: 'Add details ({n} empty)',
+      createdOn: 'Created {d}', updatedOn: 'updated {d}', noneYetTitle: 'No {x} yet', noMemberships: 'Not on any extra teams.', noHistory: 'No history yet.',
+      notFoundTitle: 'This record is not available', archiveTitle: 'Archive this {x}?', archiveConfirm: '"{x}" will be hidden from lists but kept in the history.',
+      archivedToast: '{x} archived.', noAccess: 'No access to {x}', chooseLinkType: 'Choose what it belongs to first', typeToFind: 'Type to find a {x}…',
+      noMatches: 'No matches.', choose: 'Choose…', nobody: 'Nobody', dupHidden: 'A matching record that is not assigned to you', dupUser: 'A user with this email already exists.',
+      dupFound: 'This looks like someone already saved.', dupConfirm: 'They are different — save anyway', moreDetails: 'More details ({n})',
+      requiredFields: 'Please fill in: {x}.', updatedToast: '{x} saved.', createdToast: '{x} added.',
+      convertTitle: 'Make this lead a client', convertIntroAfter: ' becomes a client. Their consultations and tasks move with them.',
+      convertedToast: 'Done — they are now a client.', downloading: 'Preparing your download…', fileHelp: 'PDF, images, Word, Excel and more · up to {mb} MB',
+      badType: 'This file type is not allowed.', tooLarge: 'The file is larger than {mb} MB.', dropHere: 'Drop a file here, or click to choose one',
+      attachTo: 'Belongs to', whichOne: 'Which one', chooseFileFirst: 'Choose a file first.', uploadedToast: 'Document uploaded.',
+      settingsSub: 'Your preferences and how the firm works.', yourPreferences: 'Your preferences', language: 'Language',
+      remindersTitle: 'Daily email reminders', reminderPersonal: 'Each morning you get one short email with what is due — only when something is.',
+      previewReminder: 'Preview my email', remindersNote: 'One email a day for each person with overdue and upcoming work, in their own language.',
+      sendNow: 'Send today’s emails now', sentN: 'Sent {n} email(s).', remindersOn: 'On · every day at {h}:00 Cairo time', remindersOff: 'Off',
+      firmSettings: 'Firm settings', settingSaved: 'Saved.', practiceHelp: 'One per line, in capitals with underscores (e.g. INTELLECTUAL_PROPERTY).',
+      systemValues: 'Fixed values', nothingForYou: 'Nothing is due for you today, so no email would be sent.'
+    },
+    ar: {
+      loading: 'جارٍ التحميل…', back: 'رجوع', edit: 'تعديل', archive: 'أرشفة', cancel: 'إلغاء', create: 'حفظ', saveChanges: 'حفظ التغييرات', save: 'حفظ',
+      clear: 'مسح', convert: 'تحويل', yes: 'نعم', no: 'لا', close: 'إغلاق', add: 'إضافة', remove: 'إزالة', archived: 'مؤرشف', optional: 'اختياري',
+      navHome: 'اليوم', navSettings: 'الإعدادات', more: 'المزيد', new: 'جديد', brandTag: 'مكتب محاماة', searchEverything: 'ابحث عن شخص أو قضية أو رقم هاتف…',
+      languageToggle: 'English', noResultsFor: 'لا توجد نتائج لـ "{q}".', system: 'النظام', somethingWrong: 'حدث خطأ ما. حاول مرة أخرى.',
+      today: 'اليوم', tomorrow: 'غدًا', yesterday: 'أمس', inDays: 'بعد {n} أيام', overdueDays: 'متأخرة {n} يوم',
+      goodMorning: 'صباح الخير يا {name}', goodAfternoon: 'مساء الخير يا {name}', goodEvening: 'مساء الخير يا {name}',
+      yourDay: 'يومك', mine: 'مهامي', everyone: 'الجميع', allClear: 'لا شيء متأخر', allClearText: 'لا يوجد ما يحتاج إليك الآن. استمتع بالهدوء.',
+      nothingToday: 'لا يوجد شيء مستحق اليوم أو غدًا.', comingUp: 'قريبًا', taskDone: 'ممتاز — تم إنجاز المهمة.', markDone: 'تم الإنجاز', call: 'اتصال',
+      consultation: 'استشارة', consultationOn: 'استشارة · {d}', deadline: 'موعد نهائي', callBack: 'معاودة الاتصال',
+      openCases: 'قضايا مفتوحة', assignedToYou: '{n} مسندة إليك', openTasks: 'مهام مفتوحة', overdueN: '{n} متأخرة', noneOverdue: 'لا شيء متأخر',
+      openLeads: 'عملاء محتملون', unassignedN: '{n} بانتظار إسناد', newThisMonth: '{n} جديد هذا الشهر', consultationsWeek: 'استشارات هذا الأسبوع',
+      scheduled: 'مجدولة', incomeThisMonth: 'إيرادات هذا الشهر', expenses: 'المصروفات {x}', outstanding: 'أتعاب مستحقة', acrossOpen: 'على القضايا المفتوحة',
+      pipeline: 'مسار العملاء المحتملين', newRecord: '{x} جديد', newTitle: 'إضافة {x}', editTitle: 'تعديل {x}', uploadDocument: 'رفع مستند', upload: 'رفع',
+      searchIn: 'بحث في {x}', all: 'الكل', showArchived: 'عرض المؤرشف', restrictedNote: 'تظهر لك السجلات المسندة إليك وإلى فرقك فقط.',
+      asMain: 'كمسؤول رئيسي', asTeam: 'كعضو في الفريق', assign: 'إسناد', assignTo: 'إسناد إلى', assignedN: 'تم إسناد {n} سجل.',
+      assignFailedN: 'تعذّر إسناد {n} سجل.', selectedN: '{n} محدد', countOf: 'الإجمالي {n}', noMatchesTitle: 'لا توجد نتائج',
+      noMatchesText: 'جرّب كلمة أخرى أو امسح عوامل التصفية.', emptyTitle: 'لا يوجد {x} بعد', emptyText: 'كل ما تضيفه سيظهر هنا.',
+      showingOf: 'عرض {n} من {total}', loadMore: 'عرض المزيد', team: 'فريق العمل', mainAssignee: 'المسؤول الرئيسي', notAssigned: 'غير مسند بعد',
+      teamMembers: 'يعمل عليه أيضًا', noMembers: 'لا أحد غيره بعد.', memberRemoved: 'تمت الإزالة من الفريق.', memberAdded: 'تمت الإضافة إلى الفريق.',
+      teamHelp: 'كل من في القائمة يمكنه رؤية هذا السجل وكل ما يرتبط به.', changeStatus: 'تغيير الحالة', statusChanged: 'تم تغيير الحالة إلى {x}.',
+      paidSoFar: 'المدفوع حتى الآن', agreedFee: 'الأتعاب المتفق عليها', remaining: 'المتبقي {x} · تم دفع {p}%', overpaid: 'مدفوع بزيادة {x}', fullyPaid: 'مدفوعة بالكامل',
+      email: 'بريد', download: 'تنزيل', convertButton: 'تحويل إلى موكل', archivedOn: 'تمت الأرشفة {date}. السجل محفوظ في التاريخ.',
+      overview: 'نظرة عامة', memberships: 'المسند إليه', history: 'السجل', noDetailsYet: 'لا توجد تفاصيل بعد.', addDetails: 'إضافة تفاصيل ({n} فارغة)',
+      createdOn: 'أُنشئ {d}', updatedOn: 'عُدّل {d}', noneYetTitle: 'لا يوجد {x} بعد', noMemberships: 'ليس عضوًا في أي فريق إضافي.', noHistory: 'لا يوجد سجل بعد.',
+      notFoundTitle: 'هذا السجل غير متاح', archiveTitle: 'أرشفة {x}؟', archiveConfirm: 'سيُخفى "{x}" من القوائم لكنه يبقى محفوظًا في السجل.',
+      archivedToast: 'تمت أرشفة {x}.', noAccess: 'لا تملك صلاحية الوصول إلى {x}', chooseLinkType: 'اختر ما ينتمي إليه أولًا', typeToFind: 'اكتب للبحث عن {x}…',
+      noMatches: 'لا توجد نتائج مطابقة.', choose: 'اختر…', nobody: 'لا أحد', dupHidden: 'سجل مطابق غير مسند إليك', dupUser: 'يوجد مستخدم بهذا البريد الإلكتروني بالفعل.',
+      dupFound: 'يبدو أن هذا الشخص مسجَّل بالفعل.', dupConfirm: 'شخص مختلف — احفظ على أي حال', moreDetails: 'تفاصيل إضافية ({n})',
+      requiredFields: 'يرجى إدخال: {x}.', updatedToast: 'تم حفظ {x}.', createdToast: 'تمت إضافة {x}.',
+      convertTitle: 'تحويل العميل المحتمل إلى موكل', convertIntroAfter: ' سيصبح موكلًا، وتنتقل معه استشاراته ومهامه.',
+      convertedToast: 'تم — أصبح موكلًا الآن.', downloading: 'جارٍ تجهيز التنزيل…', fileHelp: 'PDF وصور وWord وExcel وغيرها · حتى {mb} ميجابايت',
+      badType: 'نوع الملف غير مسموح به.', tooLarge: 'حجم الملف أكبر من {mb} ميجابايت.', dropHere: 'اسحب الملف إلى هنا أو اضغط للاختيار',
+      attachTo: 'يتبع', whichOne: 'أيّ سجل', chooseFileFirst: 'اختر ملفًا أولًا.', uploadedToast: 'تم رفع المستند.',
+      settingsSub: 'تفضيلاتك وطريقة عمل المكتب.', yourPreferences: 'تفضيلاتك', language: 'اللغة',
+      remindersTitle: 'تذكيرات البريد اليومية', reminderPersonal: 'كل صباح تصلك رسالة قصيرة بما هو مستحق — فقط عندما يوجد شيء.',
+      previewReminder: 'معاينة رسالتي', remindersNote: 'رسالة واحدة يوميًا لكل شخص بأعماله المتأخرة والقادمة بلغته.',
+      sendNow: 'إرسال رسائل اليوم الآن', sentN: 'تم إرسال {n} رسالة.', remindersOn: 'مفعّلة · يوميًا الساعة {h}:00 بتوقيت القاهرة', remindersOff: 'متوقفة',
+      firmSettings: 'إعدادات المكتب', settingSaved: 'تم الحفظ.', practiceHelp: 'مجال واحد في كل سطر، بأحرف إنجليزية كبيرة وشرطة سفلية (مثل INTELLECTUAL_PROPERTY).',
+      systemValues: 'قيم ثابتة', nothingForYou: 'لا يوجد ما يستحق اليوم، لذا لن تُرسل لك رسالة.'
+    }
+  },
+  entities: {
+    en: {
+      Leads: ['Leads', 'Lead'], Clients: ['Clients', 'Client'], Companies: ['Companies', 'Company'], Cases: ['Cases', 'Case'],
+      Consultations: ['Consultations', 'Consultation'], FollowUps: ['Tasks', 'Task'], Transactions: ['Finance', 'Payment'],
+      Documents: ['Documents', 'Document'], Users: ['Users', 'User']
+    },
+    ar: {
+      Leads: ['العملاء المحتملون', 'عميل محتمل'], Clients: ['الموكلون', 'موكل'], Companies: ['الشركات', 'شركة'], Cases: ['القضايا', 'قضية'],
+      Consultations: ['الاستشارات', 'استشارة'], FollowUps: ['المهام', 'مهمة'], Transactions: ['الحسابات', 'دفعة'],
+      Documents: ['المستندات', 'مستند'], Users: ['المستخدمون', 'مستخدم']
+    }
+  },
+  fields: {
+    en: {
+      CaseID: 'Case', ClientID: 'Client', LeadID: 'Lead', CompanyID: 'Company', ConsultationID: 'Consultation', EntityID: 'Linked record',
+      EntityType: 'Linked to', CommercialRegistrationNumber: 'Commercial registration no.', TaxNumber: 'Tax no.', AssignedTo: 'Assigned to',
+      AssignedLawyer: 'Assigned lawyer', ConvertedClientID: 'Converted client', CreatedFromLeadID: 'Created from lead', RecordedBy: 'Recorded by',
+      UploadedBy: 'Uploaded by', IsPaid: 'Paid', CampaignID: 'Campaign', FullName: 'Full name', CaseTitle: 'Title', Duration: 'Duration (minutes)'
+    },
+    ar: {
+      FullName: 'الاسم الكامل', Email: 'البريد الإلكتروني', Role: 'الدور', Status: 'الحالة', Language: 'اللغة', CreatedAt: 'تاريخ الإنشاء',
+      LastLogin: 'آخر دخول', Phone: 'الهاتف', ClientType: 'نوع العميل', CompanyID: 'الشركة', Source: 'المصدر', CampaignID: 'الحملة',
+      PracticeArea: 'مجال الممارسة', InquiryType: 'نوع الاستفسار', Description: 'الوصف', Priority: 'الأولوية', AssignedTo: 'مسند إلى',
+      UpdatedAt: 'آخر تحديث', LastContactAt: 'آخر تواصل', NextFollowUpAt: 'موعد المتابعة القادم', LostReason: 'سبب الخسارة',
+      ConvertedClientID: 'الموكل المحوَّل إليه', Address: 'العنوان', Nationality: 'الجنسية', Notes: 'ملاحظات', CreatedFromLeadID: 'أُنشئ من العميل المحتمل',
+      CompanyName: 'اسم الشركة', CommercialRegistrationNumber: 'رقم السجل التجاري', TaxNumber: 'الرقم الضريبي', ContactPerson: 'مسؤول التواصل',
+      CaseNumber: 'رقم القضية', CaseTitle: 'عنوان القضية', ClientID: 'الموكل', CaseType: 'نوع القضية', OpposingParties: 'الخصوم',
+      AssignedLawyer: 'المحامي المسؤول', StartDate: 'تاريخ البدء', Deadline: 'الموعد النهائي', AgreedFee: 'الأتعاب المتفق عليها',
+      TotalPaid: 'إجمالي المدفوع', OutstandingBalance: 'الرصيد المتبقي', ClosedAt: 'تاريخ الإغلاق', LeadID: 'العميل المحتمل',
+      ConsultationType: 'نوع الاستشارة', ConsultationDate: 'موعد الاستشارة', Duration: 'المدة (بالدقائق)', IsPaid: 'مدفوعة', Fee: 'الرسوم',
+      PaymentStatus: 'حالة الدفع', MeetingLocation: 'مكان الاجتماع', Outcome: 'النتيجة', CaseID: 'القضية', ConsultationID: 'الاستشارة',
+      Type: 'النوع', Amount: 'المبلغ', PaymentMethod: 'طريقة الدفع', PaymentDate: 'تاريخ الدفع', RecordedBy: 'سجّلها', Title: 'العنوان',
+      DueDate: 'تاريخ الاستحقاق', CompletedAt: 'تاريخ الإكمال', EntityType: 'مرتبط بـ', EntityID: 'السجل المرتبط', FileName: 'اسم الملف',
+      FileType: 'نوع الملف', UploadedBy: 'رفعه', UploadedAt: 'تاريخ الرفع', ConfidentialityLevel: 'مستوى السرية', ArchivedAt: 'تاريخ الأرشفة'
+    }
+  },
+  enums: {
+    ar: {
+      OWNER: 'مالك', PARTNER: 'شريك', LAWYER: 'محامٍ', ASSISTANT: 'مساعد', ACTIVE: 'نشط', INACTIVE: 'غير نشط', INDIVIDUAL: 'فرد', COMPANY: 'شركة',
+      LOW: 'منخفضة', MEDIUM: 'متوسطة', HIGH: 'عالية', URGENT: 'عاجلة', NEW: 'جديد', CONTACTED: 'تم التواصل', AWAITING_RESPONSE: 'في انتظار الرد',
+      QUALIFIED: 'مؤهل', CONSULTATION_SCHEDULED: 'تم تحديد استشارة', PROPOSAL_SENT: 'تم إرسال العرض', NEGOTIATION: 'تفاوض',
+      CONVERTED: 'تم التحويل إلى موكل', LOST: 'خسارة', NOT_QUALIFIED: 'غير مؤهل', WEBSITE: 'الموقع الإلكتروني', FACEBOOK: 'فيسبوك',
+      INSTAGRAM: 'إنستغرام', TIKTOK: 'تيك توك', WHATSAPP: 'واتساب', REFERRAL: 'ترشيح', PHONE: 'هاتف', OTHER: 'أخرى',
+      INITIAL_REVIEW: 'مراجعة أولية', DOCUMENTS_REQUIRED: 'مستندات مطلوبة', UNDER_PREPARATION: 'قيد التحضير', IN_PROGRESS: 'جارية',
+      AWAITING_CLIENT: 'في انتظار الموكل', AWAITING_EXTERNAL_ACTION: 'في انتظار إجراء خارجي', COMPLETED: 'مكتملة', CANCELLED: 'ملغاة',
+      OPEN: 'مفتوحة', SCHEDULED: 'مجدولة', NO_SHOW: 'لم يحضر', UNPAID: 'غير مدفوعة', PARTIALLY_PAID: 'مدفوعة جزئيًا', PAID: 'مدفوعة',
+      WAIVED: 'معفاة', INCOME: 'إيراد', EXPENSE: 'مصروف', CASH: 'نقدي', BANK_TRANSFER: 'تحويل بنكي', CARD: 'بطاقة', VODAFONE_CASH: 'فودافون كاش',
+      INSTAPAY: 'إنستاباي', CHEQUE: 'شيك', STANDARD: 'عادي', CONFIDENTIAL: 'سري', RESTRICTED: 'مقيّد', LEAD: 'عميل محتمل', CLIENT: 'موكل',
+      CASE: 'قضية', CRIMINAL: 'جنائي', CIVIL: 'مدني', LABOR: 'عمالي', CORPORATE: 'شركات', COMMERCIAL: 'تجاري', FAMILY: 'أحوال شخصية',
+      REAL_ESTATE: 'عقاري', ADMINISTRATIVE: 'إداري', EN: 'English', AR: 'العربية'
+    },
+    en: { EN: 'English', AR: 'العربية (Arabic)' }
+  },
+  settings: {
+    ar: {
+      BUSINESS_NAME: 'اسم المكتب', CURRENCY: 'العملة', TIMEZONE: 'المنطقة الزمنية', LEAD_STATUSES: 'حالات العملاء المحتملين', CASE_STATUSES: 'حالات القضايا',
+      PRACTICE_AREAS: 'مجالات الممارسة', PAYMENT_METHODS: 'طرق الدفع', NOTIFICATION_PREFERENCES: 'تفضيلات الإشعارات',
+      FUTURE_INTEGRATIONS_ENABLED: 'تفعيل التكاملات المستقبلية', email: 'إرسال تذكيرات البريد', overdueFollowUps: 'المتابعات المتأخرة',
+      upcomingConsultations: 'الاستشارات القادمة'
+    },
+    en: { email: 'Send email reminders', overdueFollowUps: 'Overdue follow-ups', upcomingConsultations: 'Upcoming consultations' }
+  },
+  actions: {
+    ar: {
+      CREATED: 'تم الإنشاء', UPDATED: 'تم التعديل', ARCHIVED: 'تمت الأرشفة', CONVERTED: 'تم التحويل إلى موكل', FINANCIALS_RECALCULATED: 'تمت إعادة حساب المبالغ',
+      PAYMENT_STATUS_RECALCULATED: 'تم تحديث حالة الدفع', LINKED_TO_CLIENT: 'تم الربط بالموكل', DUPLICATE_REVIEW_CONFIRMED: 'تم الحفظ بعد مراجعة التكرار',
+      TEAM_MEMBER_ADDED: 'تمت إضافة عضو إلى الفريق', TEAM_MEMBER_REMOVED: 'تمت إزالة عضو من الفريق', DOWNLOADED: 'تم التنزيل'
+    }
+  },
+  /** Arabic for the most common server messages; unmatched messages are shown as sent. */
+  errors: [
+    [/^(\w+) is required\.$/, 'required'],
+    [/changed by another user/, 'قام مستخدم آخر بتعديل هذا السجل. أعد تحميله ثم حاول مرة أخرى.'],
+    [/^Record was not found/, 'السجل غير موجود.'],
+    [/is not allowed to|cannot file documents/, 'لا تملك صلاحية تنفيذ هذا الإجراء.'],
+    [/cannot set financial field/, 'لا تملك صلاحية تعديل الحقول المالية.'],
+    [/only link records that are assigned to you|only attach documents to records assigned/, 'يمكنك فقط الربط بسجلات مسندة إليك.'],
+    [/Only owners and partners can/, 'المالك والشركاء فقط يمكنهم تغيير الإسناد.'],
+    [/Phone is invalid/, 'رقم الهاتف غير صحيح.'],
+    [/Email is invalid/, 'البريد الإلكتروني غير صحيح.'],
+    [/needs a phone number or email/, 'يجب إدخال رقم هاتف أو بريد إلكتروني.'],
+    [/must be an ISO date|not a valid calendar date|valid ISO-compatible date/, 'التاريخ غير صحيح.'],
+    [/must be a valid number/, 'يجب إدخال رقم صحيح.'],
+    [/cannot be negative/, 'لا يمكن أن تكون القيمة سالبة.'],
+    [/must be greater than zero/, 'يجب أن تكون القيمة أكبر من صفر.'],
+    [/cannot be archived while/, 'لا يمكن أرشفة هذا السجل لوجود سجلات نشطة مرتبطة به.'],
+    [/At least one active OWNER/, 'يجب أن يبقى مالك نشط واحد على الأقل.'],
+    [/file type is not allowed/, 'نوع الملف غير مسموح به.'],
+    [/larger than \d+ MB/, 'حجم الملف أكبر من المسموح.'],
+    [/Cannot verify your Google account|not an active Mohamy Plus user/, 'لا يمكن التحقق من حسابك أو أنك لست مستخدمًا نشطًا.'],
+    [/Transaction ClientID must match/, 'يجب أن يطابق الموكل في المعاملة موكل القضية أو الاستشارة.'],
+    [/already been converted/, 'تم تحويل هذا العميل المحتمل بالفعل.'],
+    [/^Reopen a /, 'أعد فتح العميل المحتمل قبل تحويله.'],
+    [/has an invalid value/, 'قيمة غير صحيحة.'],
+    [/does not reference an active/, 'السجل المرتبط غير موجود أو مؤرشف.'],
+    [/is still used by active/, 'مجال الممارسة مستخدم حاليًا ولا يمكن حذفه.'],
+    [/Text exceeds the allowed length/, 'النص أطول من المسموح.'],
+    [/Team members must be active users|only be assigned to active users/, 'يجب أن يكون المستخدم نشطًا.']
+  ]
+};
+</script>

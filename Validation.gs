@@ -1,6 +1,7 @@
 function mpValidateEmail_(email, fieldName, required) {
   const normalized = mpNormalizeEmail_(email);
   if (!normalized && !required) return '';
+  if (normalized.length > 320) throw new Error((fieldName || 'Email') + ' exceeds the allowed length.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) throw new Error((fieldName || 'Email') + ' is invalid.');
   return normalized;
 }
@@ -9,7 +10,8 @@ function mpValidateRecord_(sheetName, input, isCreate) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('A record object is required.');
   const record = {};
   Object.keys(input).forEach(function(key) {
-    if (MP_SCHEMAS[sheetName].indexOf(key) !== -1) record[key] = input[key];
+    if (MP_SCHEMAS[sheetName].indexOf(key) === -1) throw new Error('Unknown field for ' + sheetName + ': ' + key + '.');
+    record[key] = input[key];
   });
 
   switch (sheetName) {
@@ -18,6 +20,7 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.Email = mpValidateEmail_(record.Email, 'Email', true);
       record.Role = mpAssertEnum_(record.Role, MP_CONFIG.ROLES, 'Role', true);
       record.Status = mpAssertEnum_(record.Status || 'ACTIVE', MP_CONFIG.USER_STATUSES, 'Status', true);
+      record.Language = mpAssertEnum_(record.Language || 'EN', MP_CONFIG.LANGUAGES, 'Language', true);
       break;
     case 'Leads':
       record.FullName = mpRequiredText_(record.FullName, 'FullName', 200);
@@ -29,6 +32,7 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.Priority = mpAssertEnum_(record.Priority || 'MEDIUM', MP_CONFIG.PRIORITIES, 'Priority', true);
       record.Status = mpAssertEnum_(record.Status || 'NEW', MP_CONFIG.LEAD_STATUSES, 'Status', true);
       mpValidateOptionalDateFields_(record, ['LastContactAt', 'NextFollowUpAt']);
+      record.PracticeArea = mpValidatePracticeArea_(record.PracticeArea);
       break;
     case 'Clients':
       record.ClientType = mpAssertEnum_(record.ClientType || 'INDIVIDUAL', MP_CONFIG.CLIENT_TYPES, 'ClientType', true);
@@ -36,7 +40,8 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.Email = mpValidateEmail_(record.Email, 'Email', false);
       record.Phone = mpValidatePhone_(record.Phone, false);
       if (!record.Email && !record.Phone) throw new Error('A client needs a phone number or email address.');
-      record.Status = mpCleanText_(record.Status || 'ACTIVE', 30).toUpperCase();
+      record.Status = mpAssertEnum_(record.Status || 'ACTIVE', MP_CONFIG.CLIENT_STATUSES, 'Status', true);
+      if (record.ClientType === 'COMPANY' && mpIsBlank_(record.CompanyID)) throw new Error('CompanyID is required when ClientType is COMPANY.');
       break;
     case 'Companies':
       record.CompanyName = mpRequiredText_(record.CompanyName, 'CompanyName', 250);
@@ -51,16 +56,23 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.AgreedFee = mpToNumber_(record.AgreedFee || 0, 'AgreedFee', true);
       if (record.AgreedFee < 0) throw new Error('AgreedFee cannot be negative.');
       mpValidateOptionalDateFields_(record, ['StartDate', 'Deadline', 'ClosedAt']);
+      record.PracticeArea = mpValidatePracticeArea_(record.PracticeArea);
       break;
     case 'Consultations':
       if (mpIsBlank_(record.LeadID) && mpIsBlank_(record.ClientID)) throw new Error('A consultation must be linked to a lead or client.');
       record.ConsultationDate = mpDateIso_(record.ConsultationDate, 'ConsultationDate', true);
       record.Duration = mpToNumber_(record.Duration, 'Duration', true);
       if (record.Duration <= 0) throw new Error('Duration must be greater than zero.');
-      record.IsPaid = mpBoolean_(record.IsPaid);
       record.Fee = mpToNumber_(record.Fee || 0, 'Fee', true);
       if (record.Fee < 0) throw new Error('Fee cannot be negative.');
-      record.PaymentStatus = mpAssertEnum_(record.PaymentStatus || (record.IsPaid ? 'PAID' : 'UNPAID'), MP_CONFIG.PAYMENT_STATUSES, 'PaymentStatus', true);
+      // PaymentStatus is authoritative; IsPaid is kept consistent with it.
+      if (mpIsBlank_(record.PaymentStatus)) {
+        record.PaymentStatus = mpIsBlank_(record.IsPaid) ? 'UNPAID' : (mpBoolean_(record.IsPaid) ? 'PAID' : 'UNPAID');
+      } else if (!mpIsBlank_(record.IsPaid)) {
+        mpBoolean_(record.IsPaid);
+      }
+      record.PaymentStatus = mpAssertEnum_(record.PaymentStatus, MP_CONFIG.PAYMENT_STATUSES, 'PaymentStatus', true);
+      record.IsPaid = record.PaymentStatus === 'PAID';
       record.Status = mpAssertEnum_(record.Status || 'SCHEDULED', MP_CONFIG.CONSULTATION_STATUSES, 'Status', true);
       break;
     case 'Transactions':
@@ -79,7 +91,7 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       if (!mpIsBlank_(record.CompletedAt)) record.CompletedAt = mpDateIso_(record.CompletedAt, 'CompletedAt', false);
       break;
     case 'Documents':
-      record.EntityType = mpRequiredText_(record.EntityType, 'EntityType', 50).toUpperCase();
+      record.EntityType = mpAssertEnum_(record.EntityType, MP_CONFIG.DOCUMENT_ENTITY_TYPES, 'EntityType', true);
       record.EntityID = mpRequiredText_(record.EntityID, 'EntityID', 80);
       record.FileName = mpRequiredText_(record.FileName, 'FileName', 500);
       record.DriveFileID = mpRequiredText_(record.DriveFileID, 'DriveFileID', 200);
@@ -89,6 +101,13 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       if (!isCreate) return record;
   }
   return mpSanitizeRecordText_(record);
+}
+
+/** PracticeArea is optional, but when supplied must be a configured value. */
+function mpValidatePracticeArea_(value) {
+  if (mpIsBlank_(value)) return '';
+  const allowed = mpGetSettingValue_('PRACTICE_AREAS');
+  return mpAssertEnum_(value, Array.isArray(allowed) ? allowed : MP_DEFAULT_SETTINGS.PRACTICE_AREAS, 'PracticeArea', true);
 }
 
 function mpRequiredText_(value, fieldName, maxLength) {
@@ -108,7 +127,9 @@ function mpValidatePhone_(phone, required) {
 }
 
 function mpBoolean_(value) {
-  return value === true || String(value).toLowerCase() === 'true';
+  if (value === true || String(value).toLowerCase() === 'true') return true;
+  if (value === false || String(value).toLowerCase() === 'false') return false;
+  throw new Error('IsPaid must be a boolean value (true or false).');
 }
 
 function mpValidateOptionalDateFields_(record, fields) {
@@ -124,32 +145,11 @@ function mpSanitizeRecordText_(record) {
   return record;
 }
 
-function mpFindDuplicates_(sheetName, input, excludeId) {
-  if (['Users', 'Leads', 'Clients', 'Companies'].indexOf(sheetName) === -1) return [];
-  const phone = mpNormalizePhone_(input.Phone);
-  const email = mpNormalizeEmail_(input.Email);
-  const registration = String(input.CommercialRegistrationNumber || '').trim().toLowerCase();
-  const taxNumber = String(input.TaxNumber || '').trim().toLowerCase();
-  if (!phone && !email && !registration && !taxNumber) return [];
-  const idColumn = MP_SCHEMAS[sheetName][0];
-  return mpDbList_(sheetName, { includeArchived: false, limit: MP_CONFIG.MAX_PAGE_SIZE }).records
-    .filter(function(record) {
-      if (record[idColumn] === excludeId) return false;
-      return (phone && mpNormalizePhone_(record.Phone) === phone) ||
-        (email && mpNormalizeEmail_(record.Email) === email) ||
-        (registration && String(record.CommercialRegistrationNumber || '').trim().toLowerCase() === registration) ||
-        (taxNumber && String(record.TaxNumber || '').trim().toLowerCase() === taxNumber);
-    })
-    .map(function(record) {
-      return { id: record[idColumn], fullName: record.FullName || record.CompanyName, phone: record.Phone || '', email: record.Email || '' };
-    });
-}
-
 /** Foreign-key checks prevent orphaned records through the application API. */
 function mpValidateReferences_(sheetName, record) {
   const checks = {
-    Leads: [['CompanyID', 'Companies']],
-    Clients: [['CompanyID', 'Companies']],
+    Leads: [['CompanyID', 'Companies'], ['AssignedTo', 'Users']],
+    Clients: [['CompanyID', 'Companies'], ['AssignedTo', 'Users']],
     Cases: [['ClientID', 'Clients'], ['AssignedLawyer', 'Users']],
     Consultations: [['LeadID', 'Leads'], ['ClientID', 'Clients'], ['AssignedLawyer', 'Users']],
     Transactions: [['ClientID', 'Clients'], ['CaseID', 'Cases'], ['ConsultationID', 'Consultations'], ['RecordedBy', 'Users']],
@@ -160,6 +160,24 @@ function mpValidateReferences_(sheetName, record) {
     const field = check[0];
     const entity = check[1];
     if (mpIsBlank_(record[field])) return;
+    record[field] = mpAssertEntityId_(entity, record[field], field, false);
     if (!mpDbGetById_(entity, record[field], false)) throw new Error(field + ' does not reference an active ' + entity.slice(0, -1) + '.');
   });
+  if (sheetName === 'Documents') {
+    const entityMap = { LEAD: 'Leads', CLIENT: 'Clients', CASE: 'Cases' };
+    const entity = entityMap[record.EntityType];
+    record.EntityID = mpAssertEntityId_(entity, record.EntityID, 'EntityID', true);
+    if (!mpDbGetById_(entity, record.EntityID, false)) throw new Error('EntityID does not reference an active ' + entity.slice(0, -1) + '.');
+  }
+  if (sheetName === 'Transactions' && !mpIsBlank_(record.CaseID)) {
+    if (mpIsBlank_(record.ClientID)) throw new Error('ClientID is required when CaseID is supplied.');
+    const caseRecord = mpDbGetById_('Cases', record.CaseID, false);
+    if (!caseRecord || caseRecord.ClientID !== record.ClientID) throw new Error('Transaction ClientID must match the client associated with CaseID.');
+  }
+  if (sheetName === 'Transactions' && !mpIsBlank_(record.ConsultationID)) {
+    const consultation = mpDbGetById_('Consultations', record.ConsultationID, false);
+    if (consultation && !mpIsBlank_(consultation.ClientID)) {
+      if (mpIsBlank_(record.ClientID) || consultation.ClientID !== record.ClientID) throw new Error('Transaction ClientID must match the client associated with ConsultationID.');
+    }
+  }
 }
