@@ -27,6 +27,7 @@ function mpActiveAssignments_() {
 /** Returns null (unrestricted) or { userId, Leads, Clients, Cases, Consultations } ID sets. */
 function mpAccessScope_(actor) {
   if (!mpIsRecordRestricted_(actor)) return null;
+  if (MP_SCOPE_CACHE_[actor.userId]) return MP_SCOPE_CACHE_[actor.userId];
   const me = actor.userId;
   const scope = { userId: me, Leads: {}, Clients: {}, Cases: {}, Consultations: {} };
   const team = { Leads: {}, Clients: {}, Cases: {} };
@@ -52,6 +53,7 @@ function mpAccessScope_(actor) {
   mpRows_('Consultations').records.forEach(function(item) {
     if (item.AssignedLawyer === me || scope.Leads[item.LeadID] || scope.Clients[item.ClientID]) scope.Consultations[item.ConsultationID] = true;
   });
+  MP_SCOPE_CACHE_[me] = scope;
   return scope;
 }
 

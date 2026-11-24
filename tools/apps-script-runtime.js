@@ -28,6 +28,10 @@ function formatDate(date, timeZone, pattern) {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${sign}${pad(Math.trunc(offset / 60))}:${pad(offset % 60)}`;
 }
 
+/** Counts of the slow Google calls, so performance changes can be measured locally. */
+const STATS = { openById: 0, reads: 0, writes: 0, sheetInfo: 0, locks: 0 };
+function resetStats() { Object.keys(STATS).forEach((key) => { STATS[key] = 0; }); }
+
 function displayValue(value) {
   if (value === true) return 'TRUE';
   if (value === false) return 'FALSE';
@@ -39,15 +43,23 @@ class FakeSheet {
   constructor(name) { this.name = name; this.rows = []; this.formats = {}; this.validations = {}; this.filter = null; this.maxRows = 1000; }
   getName() { return this.name; }
   getLastRow() {
+    STATS.sheetInfo += 1;
     for (let r = this.rows.length - 1; r >= 0; r -= 1) if ((this.rows[r] || []).some((v) => v !== '' && v !== undefined)) return r + 1;
     return 0;
   }
   getLastColumn() {
+    STATS.sheetInfo += 1;
     let last = 0;
     this.rows.forEach((row) => { (row || []).forEach((v, c) => { if (v !== '' && v !== undefined) last = Math.max(last, c + 1); }); });
     return last;
   }
   getMaxRows() { return Math.max(this.maxRows, this.rows.length); }
+  getDataRange() {
+    STATS.sheetInfo += 1;
+    let rows = 0; let cols = 0;
+    this.rows.forEach((row, r) => { (row || []).forEach((v, c) => { if (v !== '' && v !== undefined) { rows = Math.max(rows, r + 1); cols = Math.max(cols, c + 1); } }); });
+    return new FakeRange(this, 1, 1, rows || 1, cols || 1);
+  }
   getRange(row, column, numRows, numColumns) { return new FakeRange(this, row, column, numRows || 1, numColumns || 1); }
   setFrozenRows() { return this; }
   setRowHeight() { return this; }
@@ -80,14 +92,15 @@ class FakeRange {
     }
     return out;
   }
-  getValues() { return this.grid((v) => v); }
-  getDisplayValues() { return this.grid(displayValue); }
+  getValues() { STATS.reads += 1; return this.grid((v) => v); }
+  getDisplayValues() { STATS.reads += 1; return this.grid(displayValue); }
   setValues(values) {
+    STATS.writes += 1;
     if (values.length !== this.numRows || values.some((line) => line.length !== this.numColumns)) throw new Error('setValues dimensions do not match the range.');
     values.forEach((line, r) => line.forEach((v, c) => this.sheet.write(this.row + r, this.column + c, v)));
     return this;
   }
-  setValue(value) { this.sheet.write(this.row, this.column, value); return this; }
+  setValue(value) { STATS.writes += 1; this.sheet.write(this.row, this.column, value); return this; }
   setNumberFormat(format) { for (let c = 0; c < this.numColumns; c += 1) this.sheet.formats[this.column + c] = format; return this; }
   getNumberFormat() { return this.sheet.formats[this.column] || 'General'; }
   setDataValidation(rule) { for (let c = 0; c < this.numColumns; c += 1) this.sheet.validations[this.column + c] = rule.allowInvalid ? null : rule.list; return this; }
@@ -126,6 +139,8 @@ function createRuntime(options) {
   const driveItems = new Map();
   const triggers = [];
   const outbox = [];
+  const cache = new Map();
+  let clockOffset = 0;
   const iterator = (items) => { let i = 0; return { hasNext: () => i < items.length, next: () => items[i++] }; };
   class FakeBlob {
     constructor(bytes, contentType, name) { this.bytes = Array.from(bytes || []); this.contentType = contentType; this.name = name; }
@@ -155,7 +170,7 @@ function createRuntime(options) {
     console: quietConsole,
     SpreadsheetApp: {
       create(name) { const ss = new FakeSpreadsheet(name); spreadsheets.set(ss.id, ss); return ss; },
-      openById(id) { const ss = spreadsheets.get(id); if (!ss || trashed.has(id)) throw new Error('Spreadsheet not found: ' + id); return ss; },
+      openById(id) { STATS.openById += 1; const ss = spreadsheets.get(id); if (!ss || trashed.has(id)) throw new Error('Spreadsheet not found: ' + id); return ss; },
       flush() {},
       newDataValidation() {
         const rule = { list: null, allowInvalid: true };
@@ -171,7 +186,8 @@ function createRuntime(options) {
         return {
           getProperty: (key) => (scriptProperties.has(key) ? scriptProperties.get(key) : null),
           setProperty: (key, value) => { scriptProperties.set(key, String(value)); },
-          deleteProperty: (key) => { scriptProperties.delete(key); }
+          deleteProperty: (key) => { scriptProperties.delete(key); },
+          getProperties: () => Object.fromEntries(scriptProperties)
         };
       }
     },
@@ -179,7 +195,7 @@ function createRuntime(options) {
       getScriptLock() {
         let mine = false;
         return {
-          waitLock() { if (lockHeld) throw new Error('Fake: script lock is already held (a nested waitLock would deadlock).'); lockHeld = true; mine = true; },
+          waitLock() { STATS.locks += 1; if (lockHeld) throw new Error('Fake: script lock is already held (a nested waitLock would deadlock).'); lockHeld = true; mine = true; },
           releaseLock() { if (mine) { lockHeld = false; mine = false; } },
           hasLock() { return mine; }
         };
@@ -221,7 +237,22 @@ function createRuntime(options) {
       sendEmail(message) { outbox.push(message); },
       getRemainingDailyQuota() { return 1500 - outbox.length; }
     },
+    CacheService: {
+      getScriptCache() {
+        const now = () => Date.now() + clockOffset;
+        return {
+          get: (key) => { const entry = cache.get(key); if (!entry || entry.expires <= now()) { cache.delete(key); return null; } return entry.value; },
+          put: (key, value, seconds) => { cache.set(key, { value: String(value), expires: now() + 1000 * (seconds || 600) }); },
+          remove: (key) => { cache.delete(key); },
+          getAll: (keys) => { const out = {}; keys.forEach((key) => { const entry = cache.get(key); if (entry && entry.expires > now()) out[key] = entry.value; }); return out; },
+          putAll: (values, seconds) => { Object.keys(values).forEach((key) => { cache.set(key, { value: String(values[key]), expires: now() + 1000 * (seconds || 600) }); }); }
+        };
+      }
+    },
     Utilities: {
+      DigestAlgorithm: { SHA_256: 'sha256' },
+      Charset: { UTF_8: 'utf8' },
+      computeDigest(algorithm, text) { return Array.from(crypto.createHash(algorithm).update(String(text), 'utf8').digest()).map((b) => (b > 127 ? b - 256 : b)); },
       getUuid: () => crypto.randomUUID(),
       formatDate,
       base64Encode(data) { return Buffer.from(typeof data === 'string' ? Buffer.from(data, 'utf8') : Uint8Array.from(data, (b) => b & 255)).toString('base64'); },
@@ -242,6 +273,8 @@ function createRuntime(options) {
     fn: (name) => resolve(name),
     setActiveEmail: (email) => { activeEmail = email; },
     outbox,
+    /** Moves the cache clock forward (to expire sign-in codes in tests). */
+    advanceCacheClock: (ms) => { clockOffset += ms; },
     triggers,
     /** Stores a file outside the documents folder (for the folder-check test). */
     createLooseFile: (name, text) => { const file = new FakeFile(new FakeBlob(Array.from(Buffer.from(text)), 'text/plain', name), null); driveItems.set(file.id, file); return file.id; },
@@ -249,4 +282,4 @@ function createRuntime(options) {
   };
 }
 
-module.exports = { createRuntime, ROOT };
+module.exports = { createRuntime, ROOT, STATS, resetStats };

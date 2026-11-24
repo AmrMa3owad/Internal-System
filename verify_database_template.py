@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from generate_database_template import ROOT, WORKBOOK_FILE, load_configuration
 
 
-REQUIRED_SHEETS = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments"]
+REQUIRED_SHEETS = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog"]
 EXPECTED_VALIDATIONS = {
     "Users": {"Role": "ROLES", "Status": "USER_STATUSES", "Language": "LANGUAGES"},
     "Leads": {"ClientType": "CLIENT_TYPES", "Source": "LEAD_SOURCES", "Priority": "PRIORITIES", "Status": "LEAD_STATUSES"},
@@ -40,7 +40,7 @@ def verify() -> dict[str, object]:
     if missing_sheets:
         errors.append("Missing worksheets: " + ", ".join(missing_sheets))
     else:
-        checks.append("All twelve required entity worksheets exist.")
+        checks.append("All thirteen required entity worksheets exist.")
 
     for sheet_name in REQUIRED_SHEETS:
         if sheet_name not in workbook.sheetnames:

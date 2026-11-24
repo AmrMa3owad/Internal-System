@@ -88,6 +88,10 @@ function mpApiGetCurrentUser_(actor) {
 
 /** LastLogin is session metadata: written without a Version bump so it never causes edit conflicts. */
 function mpTouchLastLogin_(userId) {
+  // Recording it on every page load cost a locked write; every 6 hours is plenty.
+  const known = mpRows_('Users').records.filter(function(item) { return item.UserID === userId; })[0];
+  const last = known && !mpIsBlank_(known.LastLogin) ? new Date(known.LastLogin).getTime() : 0;
+  if (last && Date.now() - last < 6 * 3600 * 1000) return;
   mpWithLock_(function() {
     const rows = mpRows_('Users');
     const user = rows.records.filter(function(item) { return item.UserID === userId; })[0];

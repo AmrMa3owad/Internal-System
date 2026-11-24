@@ -69,8 +69,8 @@ function mpTestSeedCompaniesBeyondPage_(count) {
     const record = { CompanyID: mpNewId_('Companies'), CompanyName: 'Stage 1 Bulk ' + index, CommercialRegistrationNumber: '', TaxNumber: '', ContactPerson: '', Phone: '', Email: email, Address: '', Notes: '', CreatedAt: now, IsArchived: false, ArchivedAt: '', Version: 1 };
     rows.push(mpRecordValues_(result.headers, record));
   }
-  mpInvalidateRows_('Companies');
   result.sheet.getRange(result.sheet.getLastRow() + 1, 1, rows.length, result.headers.length).setValues(rows);
+  mpInvalidateRows_('Companies');
   SpreadsheetApp.flush();
 }
 

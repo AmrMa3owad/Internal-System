@@ -47,7 +47,7 @@ const MP_CONFIG = Object.freeze({
   ENTITY_ID_PREFIXES: {
     Users: 'USR', Leads: 'LED', Clients: 'CLT', Companies: 'CMP', Cases: 'CAS',
     Consultations: 'CON', Transactions: 'TRX', FollowUps: 'FLW', Activities: 'ACT',
-    Documents: 'DOC', Assignments: 'ASG'
+    Documents: 'DOC', Assignments: 'ASG', AccessLog: 'LOG'
   }
 });
 
@@ -64,6 +64,7 @@ const MP_SYSTEM_MANAGED_FIELDS = Object.freeze({
   Activities: ['ActivityID', 'EntityType', 'EntityID', 'Action', 'Description', 'PerformedBy', 'Timestamp'],
   Documents: ['DocumentID', 'DriveFileID', 'FileType', 'UploadedBy', 'UploadedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   Assignments: ['AssignmentID', 'EntityType', 'EntityID', 'UserID', 'AddedBy', 'AddedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  AccessLog: ['LogID', 'Timestamp', 'Event', 'Email', 'UserID', 'Detail'],
   Settings: ['SettingKey', 'UpdatedAt', 'UpdatedBy', 'Version']
 });
 
@@ -82,7 +83,9 @@ const MP_SCHEMAS = Object.freeze({
   Documents: ['DocumentID', 'EntityType', 'EntityID', 'FileName', 'DriveFileID', 'FileType', 'UploadedBy', 'UploadedAt', 'Description', 'ConfidentialityLevel', 'IsArchived', 'ArchivedAt', 'Version'],
   Settings: ['SettingKey', 'SettingValue', 'UpdatedAt', 'UpdatedBy', 'Version'],
   // Extra team members per Lead/Client/Case, in addition to the record's main assignee.
-  Assignments: ['AssignmentID', 'EntityType', 'EntityID', 'UserID', 'AddedBy', 'AddedAt', 'IsArchived', 'ArchivedAt', 'Version']
+  Assignments: ['AssignmentID', 'EntityType', 'EntityID', 'UserID', 'AddedBy', 'AddedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  // Every sign-in attempt (owners read it on the Security page).
+  AccessLog: ['LogID', 'Timestamp', 'Event', 'Email', 'UserID', 'Detail']
 });
 
 const MP_DEFAULT_SETTINGS = Object.freeze({
@@ -124,7 +127,9 @@ const MP_PERMISSIONS = Object.freeze({
   Settings: { read: MP_ALL_ROLES_, update: ['OWNER'] },
   LeadConversion: { create: MP_ALL_ROLES_ },
   // Team membership and bulk assignment: who may grant staff access to records.
-  Assignments: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ }
+  Assignments: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ },
+  // Sign-in activity, retry limits, and signed-in devices.
+  AccessLog: { read: ['OWNER'], update: ['OWNER'] }
 });
 
 /** Foreign keys per entity (field -> target entity). Documents.EntityID is polymorphic via EntityType. */

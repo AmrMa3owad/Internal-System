@@ -66,11 +66,18 @@ Google Sheets is not an ACID relational database. Multi-sheet operations are val
 ### Deploy
 
 1. Push every `.gs` and `.html` file plus `appsscript.json` (with clasp, `.claspignore` already limits the push to those files).
-2. Complete the database setup above and add staff to `Users` with their **Workspace** email addresses.
-3. **Deploy → New deployment → Web app**. The manifest sets **Execute as: Me (the owner)** and **Who has access: anyone in your domain**. Keep both.
-4. Share the web app URL with staff. Do **not** share the database spreadsheet with them.
+2. Complete the database setup above and add each person to `Users` with the email address they will sign in with (Gmail or Workspace).
+3. **Deploy → New deployment → Web app**: **Execute as: Me (the owner)**, **Who has access: Anyone with a Google account** (the manifest sets both).
+4. Share the web app URL. Do **not** share the database spreadsheet or the documents folder.
 
-Why this model: the script runs with the owner's access to the spreadsheet, so staff never need, and must never get, direct Sheet access, which would bypass every backend rule. Within the same Workspace domain, Apps Script still exposes each visitor's email, so `mpRequireActiveUser_()` can identify them. Anyone without an active `Users` record sees an access-denied page, and every data call fails closed independently.
+Why this model: the script always runs with the owner's access, so staff never need, and must never get, direct Sheet access, which would bypass every backend rule.
+
+### Signing in
+
+- **Owner (the deploying account), or anyone in the same Google Workspace domain:** Google identifies them, so they go straight in.
+- **Everyone else, including personal @gmail.com accounts:** Google does not tell an "execute as me" web app who the visitor is, so the app shows its own sign-in. The person enters their email, receives a 6-digit code by email, and is signed in on that device for 30 days. The **Sign out** button sits next to their name.
+- Codes expire after 10 minutes and allow 5 attempts. Each email can request 5 codes per hour, and the answer never reveals whether an email is registered. Session tokens are stored only as salted hashes in Script Properties and are re-checked against an **active** `Users` record on every action, so setting someone `INACTIVE` signs them out immediately.
+- Codes are sent with the owner's mail quota (about 100 recipients a day for a personal Gmail account), which reminders share.
 
 ### What it does
 
@@ -184,6 +191,24 @@ The structured report covers CRUD/archive, UUIDs, version conflicts, protected f
 Run `node tools/local-test-harness.js` for a local check. It loads every `.gs` file with in-memory fakes of the Apps Script services, enforces strict sheet dropdown validation on writes, runs bootstrap, `setupDatabase()`, the full suite, and public API identity smoke tests. It approximates Google Sheets; it does **not** replace running `runStage1DatabaseTests()` in the real Apps Script project before go-live.
 
 When regenerating the template, `python generate_database_template.py` writes only the workbook. The setup guide is hand-maintained; pass `--write-guide` only to deliberately overwrite it with the generator's version.
+
+## Security page (owners)
+
+**More → Security** shows:
+
+- **Sign-in activity:** every attempt, newest first, filterable to *Problems* (unknown emails, wrong or expired codes, lockouts, hourly limits, Google accounts that are not users, deactivated users trying a saved sign-in, flood protection) or *Successful*. Entries live in the `AccessLog` sheet, which is created automatically on first use.
+- **Allow retry now:** clears an email's 1-hour limit (and any half-used code) so they can request a code immediately. This is also offered next to each limit, lockout, and wrong-code entry.
+- **Signed-in devices:** everyone signed in with an email code, with when they signed in and when it expires. Owners can sign a device out remotely.
+
+A code is stored against the one email it was sent to and only signs in that user. More than 60 code requests in 10 minutes, across all emails, pauses new requests and logs it once. Apps Script does not reveal a visitor's IP address or device, so an attempt appears in the log once the person types an email, or immediately if they open the app with a Google account that is not a user.
+
+## Speed
+
+- Opening the app is one round trip: owners get the first screen built into the page, and code-signed-in staff make one `apiStart` call.
+- Sheet contents are kept in Apps Script's shared cache for 15 minutes, with a version stamp per sheet. Every change made through the app replaces that stamp, so everyone sees app changes immediately. Saves always read the real sheet under the lock, so edit-conflict checks never use a cached copy. **Edits typed directly into the spreadsheet appear in the app within 15 minutes.**
+- The browser keeps screens you have visited and shows them instantly, then refreshes them quietly. Any change you make clears them.
+- `LastLogin` is written at most every 6 hours instead of on every visit.
+- `node tools/perf-check.js` counts the slow Google calls each screen makes. Actions slower than 2.5 s are logged under **Executions** in Apps Script.
 
 ## Known platform limits
 

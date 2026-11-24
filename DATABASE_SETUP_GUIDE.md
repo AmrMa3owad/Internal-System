@@ -1,6 +1,6 @@
 # Mohamy Plus database template setup
 
-`Mohamy_Plus_Database_Template.xlsx` is an empty import template generated from `MP_SCHEMAS`, `MP_CONFIG`, and `MP_DEFAULT_SETTINGS`. It contains twelve entity worksheets and hidden `ValidationLists`. Only Settings defaults are populated; there are no users, leads, clients, cases, payments, or documents.
+`Mohamy_Plus_Database_Template.xlsx` is an empty import template generated from `MP_SCHEMAS`, `MP_CONFIG`, and `MP_DEFAULT_SETTINGS`. It contains thirteen entity worksheets and hidden `ValidationLists`. Only Settings defaults are populated; there are no users, leads, clients, cases, payments, or documents.
 
 ## Entity worksheets and relationships
 
@@ -15,6 +15,7 @@
 - `Activities` — append-only backend audit history.
 - `Documents` — Drive file metadata linked to a lead, client, or case.
 - `Settings` — serialized `MP_DEFAULT_SETTINGS` values.
+- `AccessLog` — every sign-in attempt (written only by the app; owners read it on the Security page).
 - `Assignments` — extra staff team members on a lead, client, or case (managed only by the app; owners and partners add or remove them).
 
 Relationships are `Companies → Clients`, `Leads → Clients`, `Clients → Cases`, and `Cases → Transactions`. User IDs supply assignment/recording references. Activities and Documents attach by entity type and ID.
@@ -30,7 +31,7 @@ When the backend reports a possible duplicate, review the returned match list. C
 1. Generate when needed with `python generate_database_template.py`, then run `python verify_database_template.py`.
 2. Upload `Mohamy_Plus_Database_Template.xlsx` to the approved Google Drive account.
 3. Choose **Open with → Google Sheets** to convert it.
-4. Inspect before binding: all twelve sheets must exist; headers in row 1 must exactly match `MP_SCHEMAS` in order; Settings must be intact; `ValidationLists` should remain hidden. The backend does not trust a spreadsheet only because its name matches.
+4. Inspect before binding: all thirteen sheets must exist; headers in row 1 must exactly match `MP_SCHEMAS` in order; Settings must be intact; `ValidationLists` should remain hidden. The backend does not trust a spreadsheet only because its name matches.
 5. Copy the spreadsheet ID from the URL between `/d/` and `/edit`.
 
 ## Bind and initialize

@@ -160,6 +160,14 @@
   .legend a { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; }
   .legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 
+  .stats.wide { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom: 20px; }
+  .side-stack > * + * { margin-top: 12px; }
+  .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .quick { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 10px; cursor: pointer; text-align: start; font-weight: 500; transition: border-color .12s, background .12s; }
+  .quick:hover { border-color: var(--brass-2); background: var(--brass-soft); }
+  .quick .tile-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .detail-grid.wide-side { grid-template-columns: minmax(0, 1fr) 340px; }
+
   /* ---------- Lists ---------- */
   .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
   .toolbar .find { position: relative; flex: 1; min-width: 220px; max-width: 380px; }
@@ -283,6 +291,24 @@
   .toast.error { background: var(--danger); }
   .toast .icon { color: var(--brass-2); }
   .toast.error .icon { color: #fff; }
+
+  /* ---------- Sign-in ---------- */
+  body.signed-out .app { display: none; }
+  .signin { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; z-index: 60;
+    background: radial-gradient(1200px 600px at 50% -10%, #fffaf0 0%, var(--paper) 55%, #efe8db 100%); }
+  .signin-card { width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow-lg); padding: 32px; animation: rise .2s ease-out; }
+  .signin-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
+  .signin-name { font: 600 17px var(--font-display); color: var(--ink); }
+  .signin-card h1 { font: 600 26px/1.2 var(--font-display); margin: 0 0 8px; color: var(--ink); }
+  .signin-card p { margin: 0 0 20px; }
+  .signin-card form { display: flex; flex-direction: column; gap: 8px; }
+  .signin-input { height: 46px; font-size: 16px; }
+  .signin-input.code { text-align: center; letter-spacing: 10px; font: 600 24px var(--font-display); height: 56px; }
+  .signin-button { height: 46px; margin-top: 8px; font-size: 15px; }
+  .signin-links { display: flex; justify-content: space-between; margin-top: 18px; font-size: 13px; }
+  .signin-lang { display: inline-flex; gap: 8px; align-items: center; border: 0; background: none; color: var(--muted); cursor: pointer; }
+  .sign-out { margin-inline-start: auto; color: #8d97a6; }
+  .sign-out:hover { background: rgba(255,255,255,.08); color: #fff; }
 
   /* ---------- Small screens ---------- */
   @media (max-width: 1000px) { .home-grid, .detail-grid { grid-template-columns: minmax(0, 1fr); } }

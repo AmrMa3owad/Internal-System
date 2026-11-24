@@ -280,7 +280,7 @@ Excel dropdowns are convenience guidance only. They do **not** replace Apps Scri
 
 1. Upload `Mohamy_Plus_Database_Template.xlsx` to the approved Google Drive account.
 2. In Drive, right-click it and choose **Open with → Google Sheets**. This converts it to a Google Sheet.
-3. Inspect every imported worksheet before use: all twelve entity sheets must exist, headers must be in row 1, in the exact order shown, and the Settings values must be present. The hidden `ValidationLists` worksheet supports dropdowns and should remain hidden.
+3. Inspect every imported worksheet before use: all thirteen entity sheets must exist, headers must be in row 1, in the exact order shown, and the Settings values must be present. The hidden `ValidationLists` worksheet supports dropdowns and should remain hidden.
 4. Open the converted spreadsheet. Its URL has the form `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`; copy only the value between `/d/` and `/edit`.
 5. In the Apps Script project, run `bindExistingDatabase('SPREADSHEET_ID')`. It validates every required sheet, exact header order, duplicate columns, and required Settings defaults before it stores the ID. An incompatible spreadsheet is not modified or bound. Do not put the ID into source files, HTML, or documentation.
 6. Run `setupDatabase()`. It safely creates missing sheets or headers only in genuinely blank sheets, applies presentation configuration, and provisions an initial owner. It refuses nonblank incompatible schemas and never resets an existing setting value.
@@ -299,7 +299,7 @@ No spreadsheet IDs, credentials, secrets, sample users, fabricated clients, or s
 def generate(write_guide_file: bool = False) -> tuple[Path, Path | None]:
     """Build the workbook. The guide is hand-maintained; only overwrite it on request."""
     schemas, dropdowns, defaults = load_configuration()
-    expected_sheets = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments"]
+    expected_sheets = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog"]
     if list(schemas) != expected_sheets:
         raise ValueError("MP_SCHEMAS does not match the required entity order; generation stopped.")
 

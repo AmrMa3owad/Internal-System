@@ -86,6 +86,7 @@ function mpAssertGenericOperationAllowed_(sheetName, operation) {
   if (sheetName === 'Activities') throw new Error('Activities are append-only and may only be created by trusted server workflows.');
   if (sheetName === 'Settings') throw new Error('Settings cannot be changed through generic ' + operation + ' operations.');
   if (sheetName === 'Assignments') throw new Error('Team assignments are managed only through the assignment workflow.');
+  if (sheetName === 'AccessLog') throw new Error('The access log is written only by the sign-in workflow.');
   if (sheetName === 'Documents' && operation === 'create') throw new Error('Documents are created only by uploading a file.');
 }
 
@@ -94,11 +95,18 @@ function mpAssertGenericOperationAllowed_(sheetName, operation) {
  * API call goes through this; it fails closed like the administrative checks.
  */
 function mpRequireActiveUser_() {
-  const email = mpGetActiveUserEmail_();
-  const user = mpFindActiveUserByEmail_(email);
-  if (!user) throw new Error('Your Google account is not an active Mohamy Plus user. Ask an owner to add you.');
+  const identity = mpCurrentIdentity_();
+  const user = mpFindActiveUserByEmail_(identity.email);
+  if (!user) {
+    // A session for a user who was deactivated or removed is no longer valid.
+    if (identity.via === 'code') {
+      mpLogAccessOnce_('SESSION_REJECTED', identity.email, '', 'Tried to use a saved sign-in after the user was deactivated or removed.');
+      throw mpAuthError_('Please sign in.', 'AUTH_REQUIRED');
+    }
+    throw new Error('Your Google account is not an active Mohamy Plus user. Ask an owner to add you.');
+  }
   if (MP_CONFIG.ROLES.indexOf(user.Role) === -1) throw new Error('Your user record has an invalid role. Ask an owner to correct it.');
-  return { email: email, userId: user.UserID, role: user.Role, fullName: user.FullName };
+  return { email: identity.email, userId: user.UserID, role: user.Role, fullName: user.FullName, via: identity.via };
 }
 
 function mpCan_(role, entity, action) {

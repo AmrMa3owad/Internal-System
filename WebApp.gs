@@ -9,15 +9,31 @@
 
 /** Page entry point. Unauthorized visitors get a static access-denied page. */
 function doGet() {
-  let actor;
+  let actor = null;
   try {
     actor = mpRequireActiveUser_();
   } catch (error) {
-    return HtmlService.createHtmlOutput(mpAccessDeniedHtml_(error.message)).setTitle('Mohamy Plus — access denied');
+    // No Google identity (e.g. personal Gmail): load the app, which shows the email-code sign-in.
+    if (error.code === 'AUTH_REQUIRED') actor = null;
+    else {
+    let seenAs = '';
+    try { seenAs = mpNormalizeEmail_(Session.getActiveUser().getEmail()); } catch (ignored) { seenAs = ''; }
+    if (seenAs) mpLogAccessOnce_('GOOGLE_DENIED', seenAs, '', 'Opened the app with a Google account that is not an active user.');
+    return HtmlService.createHtmlOutput(mpAccessDeniedHtml_(error.message, seenAs)).setTitle('Mohamy Plus — access denied');
+    }
   }
   const template = HtmlService.createTemplateFromFile('Index');
   template.businessName = mpGetSettingValue_('BUSINESS_NAME') || MP_DEFAULT_SETTINGS.BUSINESS_NAME;
-  template.userName = actor.fullName || actor.email;
+  template.userName = actor ? (actor.fullName || actor.email) : '';
+  // People Google identifies get their first screen inside the page itself: no extra round trip.
+  let preload = 'null';
+  if (actor) {
+    try {
+      mpTouchLastLogin_(actor.userId);
+      preload = JSON.stringify(mpSuccess_(mpApiStart_(actor))).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+    } catch (error) { console.error(error); preload = 'null'; }
+  }
+  template.preload = preload;
   return template.evaluate()
     .setTitle(String(template.businessName))
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -33,11 +49,15 @@ function mpEscapeHtml_(value) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function mpAccessDeniedHtml_(message) {
+/** seenAs: the account Google reported (blank when Google withholds it), shown to help fix the Users entry. */
+function mpAccessDeniedHtml_(message, seenAs) {
+  const account = seenAs
+    ? '<p class="who">Signed in as / الحساب الحالي: <b>' + mpEscapeHtml_(seenAs) + '</b></p>'
+    : '<p class="who">Google did not share which account you are signed in with. Use your firm Workspace account. / لم تُرسل Google بيانات حسابك. استخدم حساب المكتب.</p>';
   return '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>' +
     'body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f4f6fa;color:#102a43;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}' +
-    '.card{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(16,42,67,.08);padding:32px;max-width:440px}h1{font-size:20px;margin:0 0 12px}p{color:#486581;line-height:1.5}' +
-    '</style></head><body><div class="card"><h1>Access denied</h1><p>' + mpEscapeHtml_(message) + '</p>' +
+    '.card{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(16,42,67,.08);padding:32px;max-width:440px}h1{font-size:20px;margin:0 0 12px}p{color:#486581;line-height:1.5}.who{background:#f4f6fa;border-radius:8px;padding:10px 12px;color:#102a43}' +
+    '</style></head><body><div class="card"><h1>Access denied</h1><p>' + mpEscapeHtml_(message) + '</p>' + account +
     '<h1 dir="rtl" style="margin-top:20px">تم رفض الوصول</h1><p dir="rtl">لا يمكن التحقق من حسابك أو أنه غير مضاف كمستخدم نشط في محامي بلس. اطلب من المالك إضافتك.</p></div></body></html>';
 }
 
@@ -173,6 +193,7 @@ function mpApiBootstrap_(actor) {
   const me = mpDbGetById_('Users', actor.userId, false);
   profile.language = me && me.Language === 'AR' ? 'AR' : 'EN';
   profile.restricted = mpIsRecordRestricted_(actor);
+  profile.signedInWith = actor.via || 'google';
   profile.assignable = MP_CONFIG.ASSIGNABLE_ENTITIES;
   profile.assigneeFields = MP_ASSIGNEE_FIELDS;
   profile.upload = { maxBytes: MP_CONFIG.MAX_UPLOAD_BYTES, extensions: MP_CONFIG.UPLOAD_EXTENSIONS };
@@ -276,7 +297,11 @@ function mpApiDashboard_(actor) {
       deadlines: cases.filter(function(item) { return !mpIsBlank_(item.Deadline) && mpCairoDate_(item.Deadline) <= mpAddDaysIso_(14); }).sort(byDate('Deadline')).slice(0, 10)
         .map(function(item) { return mpRedactRecord_(actor, 'Cases', item); })
     };
-    labelled.push(['Cases', out.sections.cases.deadlines]);
+    // The signed-in person's own open cases, nearest deadline first (cases without one last).
+    out.sections.cases.myCases = cases.filter(function(item) { return item.AssignedLawyer === actor.userId; })
+      .sort(function(left, right) { return String(left.Deadline || '9999').localeCompare(String(right.Deadline || '9999')); })
+      .slice(0, 6).map(function(item) { return mpRedactRecord_(actor, 'Cases', item); });
+    labelled.push(['Cases', out.sections.cases.deadlines.concat(out.sections.cases.myCases)]);
   }
   if (mpCan_(actor.role, 'FollowUps', 'read')) {
     const tasks = active('FollowUps').filter(MP_OPEN_WORK_.FollowUps);
@@ -315,6 +340,20 @@ function mpApiDashboard_(actor) {
 }
 
 // --------------------------------------------------------- Public entry points
+
+/** Everything the first screen needs, in one round trip. */
+function mpApiStart_(actor) {
+  return { boot: mpApiBootstrap_(actor), dashboard: mpApiDashboard_(actor) };
+}
+
+/** Profile + home dashboard together, so opening the app is one call. */
+function apiStart() {
+  return mpApiRespond_(function() {
+    const actor = mpRequireActiveUser_();
+    mpTouchLastLogin_(actor.userId);
+    return mpApiStart_(actor);
+  });
+}
 
 /** UI bootstrap: profile, permissions, enums, form metadata, assignable users. Records LastLogin. */
 function apiGetAppBootstrap() {

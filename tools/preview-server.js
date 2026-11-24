@@ -90,7 +90,9 @@ update('Clients', clientA.ClientID, { AssignedTo: lawyer.UserID }, clientRow.Ver
 const assistantRow = fn('mpDbGetById_')('Users', assistant.UserID, false);
 update('Users', assistant.UserID, { Language: 'AR' }, assistantRow.Version, ownerId);
 
-const IDENTITIES = { owner: runtime.ownerEmail, partner: 'partner@demo.test', lawyer: 'lawyer@demo.test', assistant: 'assistant@demo.test' };
+// 'guest' behaves like a personal Gmail visitor Google does not identify: the app shows the email-code sign-in.
+const IDENTITIES = { owner: runtime.ownerEmail, partner: 'partner@demo.test', lawyer: 'lawyer@demo.test', assistant: 'assistant@demo.test', guest: '' };
+const hasIdentity = (name) => Object.prototype.hasOwnProperty.call(IDENTITIES, name);
 
 // ---------------------------------------------------------------- Render
 function escapeHtml(value) {
@@ -104,6 +106,7 @@ function startScreen(screen, actor) {
   const first = (name) => fn('mpApiList_')(actor, name, { limit: 1, sortBy: fn('mpUiCreatedField_')(name) }).records[0];
   if (kind === 'list') return { route: { view: 'list', entity } };
   if (kind === 'settings') return { route: { view: 'settings' } };
+  if (kind === 'security') return { route: { view: 'security' } };
   if (kind === 'detail') return { route: { view: 'detail', entity, id: first(entity)[fn('MP_SCHEMAS')[entity][0]] } };
   if (kind === 'form') return { route: { view: 'list', entity }, form: entity };
   if (kind === 'edit') return { route: { view: 'list', entity }, form: entity, record: first(entity) };
@@ -114,15 +117,18 @@ function startScreen(screen, actor) {
 
 function renderIndex(as, screen) {
   runtime.setActiveEmail(IDENTITIES[as]);
-  const user = fn('mpRequireActiveUser_')();
-  const vars = { businessName: fn('mpGetSettingValue_')('BUSINESS_NAME'), userName: user.fullName };
+  let user = null;
+  try { user = fn('mpRequireActiveUser_')(); } catch (error) { user = null; }
+  const vars = { businessName: fn('mpGetSettingValue_')('BUSINESS_NAME'), userName: user ? user.fullName : '' };
   let html = fs.readFileSync(path.join(ROOT, 'Index.html'), 'utf8');
   html = html.replace(/<\?!=\s*mpInclude_\('([A-Za-z0-9]+)'\);?\s*\?>/g, (match, name) => {
     const file = fs.readFileSync(path.join(ROOT, name + '.html'), 'utf8');
     if (name !== 'App') return file;
-    const start = JSON.stringify(startScreen(screen, user)).split('<').join('\\u003c');
+    const start = JSON.stringify(user ? startScreen(screen, user) : null).split('<').join('\\u003c');
     return SHIM + '<script>window.__MP_START__ = ' + start + ';</script>' + file;
   });
+  const preload = user ? JSON.stringify(fn('mpSuccess_')(fn('mpApiStart_')(user))).split('<').join('\u003c') : 'null';
+  html = html.replace(/<\?!=\s*preload\s*\?>/, () => preload);
   html = html.replace(/<\?=\s*([A-Za-z]+)\s*\?>/g, (match, name) => escapeHtml(vars[name]));
   if (/<\?/.test(html)) throw new Error('Unrendered scriptlet left in Index.html');
   const bar = '<div style="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:100;background:#fff4e0;color:#a15c07;font:12px system-ui;padding:4px 10px;border-radius:0 0 8px 8px;box-shadow:0 2px 6px rgba(0,0,0,.15)">' +
@@ -156,7 +162,7 @@ const SHIM = `<script>
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (req.method === 'GET' && url.pathname === '/') {
-    const as = IDENTITIES[url.searchParams.get('as')] ? url.searchParams.get('as') : 'owner';
+    const as = hasIdentity(url.searchParams.get('as')) ? url.searchParams.get('as') : 'owner';
     try {
       const html = renderIndex(as, url.searchParams.get('screen'));
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -178,8 +184,10 @@ const server = http.createServer((req, res) => {
       let thrown = null;
       try {
         if (!/^api[A-Z]\w*$/.test(name) || typeof fn(name) !== 'function') throw new Error('Not an exposed API function: ' + name);
-        runtime.setActiveEmail(IDENTITIES[payload.as] || IDENTITIES.owner);
+        runtime.setActiveEmail(hasIdentity(payload.as) ? IDENTITIES[payload.as] : IDENTITIES.owner);
+        const mailsBefore = runtime.outbox.length;
         result = fn(name).apply(null, Array.isArray(payload.args) ? payload.args : []);
+        runtime.outbox.slice(mailsBefore).forEach((mail) => { if (/\d{6}/.test(mail.subject)) console.log('[preview] sign-in email to ' + mail.to + ': ' + mail.subject); });
       } catch (error) { thrown = error.message; }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(thrown ? { thrown } : { result: result === undefined ? null : result }));

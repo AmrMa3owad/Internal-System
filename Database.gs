@@ -156,6 +156,7 @@ function mpSetupDatabase_(options) {
     const bootstrap = mpBootstrapOwner_(spreadsheet);
     if (!boundId && !options.spreadsheet) properties.setProperty(MP_CONFIG.DATABASE_ID_PROPERTY, spreadsheet.getId());
     const documents = (options.spreadsheet || MP_EXECUTION_DATABASE_ID_) ? { created: false } : mpEnsureDocumentsFolder_();
+    if (!options.spreadsheet) Object.keys(MP_SCHEMAS).forEach(function(name) { mpInvalidateRows_(name); });
     mpInvalidateRows_();
     return { spreadsheetName: spreadsheet.getName(), created: created, configured: configured, settingsAdded: settingsResult.added, ownerProvisioned: bootstrap.provisioned, documentsFolderCreated: documents.created, rerunnable: true };
   });
@@ -202,13 +203,102 @@ function mpApplySheetValidation_(sheet, headers) {
  */
 var MP_ROWS_CACHE_ = {};
 var MP_SPREADSHEET_CACHE_ = {};
+var MP_SCOPE_CACHE_ = {};
 var MP_LOCK_DEPTH_ = 0;
 
+/**
+ * Shared sheet snapshots (CacheService) so a new request does not have to
+ * re-read every sheet. Each sheet has a version stamp that every app write
+ * replaces, so readers never get a snapshot older than the latest app change.
+ * Writes always read the sheet itself while holding the lock. Edits made by
+ * hand directly in the spreadsheet appear within MP_SHARED_CACHE_SECONDS_.
+ */
+const MP_SHARED_CACHE_SECONDS_ = 15 * 60;
+const MP_SHARED_CACHE_CHUNK_ = 40000;
+const MP_SHARED_CACHE_MAX_CHUNKS_ = 40;
+
+/** Clears every per-request cache (Apps Script starts each request empty; tests simulate that). */
+function mpResetExecutionCaches_() { MP_ROWS_CACHE_ = {}; MP_SPREADSHEET_CACHE_ = {}; MP_SCOPE_CACHE_ = {}; }
+
+/** Call after (never before) writing to a sheet. With no name, only this request's copies are dropped. */
 function mpInvalidateRows_(sheetName) {
+  MP_SCOPE_CACHE_ = {};
   if (!sheetName) { MP_ROWS_CACHE_ = {}; return; }
   Object.keys(MP_ROWS_CACHE_).forEach(function(key) {
     if (key.split('|')[1] === sheetName) delete MP_ROWS_CACHE_[key];
   });
+  mpBumpSheetVersion_(sheetName);
+}
+
+function mpSharedCache_() {
+  try { return CacheService.getScriptCache(); } catch (error) { return null; }
+}
+
+function mpSheetVersionKey_(sheetName) { return 'mpv:' + mpCurrentDatabaseId_() + ':' + sheetName; }
+
+function mpBumpSheetVersion_(sheetName) {
+  const cache = mpSharedCache_();
+  if (!cache) return;
+  try { cache.put(mpSheetVersionKey_(sheetName), Utilities.getUuid(), 21600); } catch (error) { /* cache is an optimisation only */ }
+}
+
+/** Where this sheet's snapshot lives for its current version. */
+function mpSnapshotTarget_(sheetName) {
+  const cache = mpSharedCache_();
+  if (!cache) return null;
+  try {
+    const key = mpSheetVersionKey_(sheetName);
+    let version = cache.get(key);
+    if (!version) { version = Utilities.getUuid(); cache.put(key, version, 21600); }
+    return { cache: cache, base: 'mps:' + mpCurrentDatabaseId_() + ':' + sheetName + ':' + version };
+  } catch (error) { return null; }
+}
+
+function mpReadSnapshot_(target) {
+  if (!target) return null;
+  try {
+    const count = Number(target.cache.get(target.base));
+    if (!count) return null;
+    const keys = [];
+    for (let index = 0; index < count; index += 1) keys.push(target.base + ':' + index);
+    const parts = target.cache.getAll(keys);
+    let text = '';
+    for (let index = 0; index < keys.length; index += 1) {
+      if (parts[keys[index]] === undefined || parts[keys[index]] === null) return null;
+      text += parts[keys[index]];
+    }
+    return JSON.parse(text);
+  } catch (error) { return null; }
+}
+
+function mpWriteSnapshot_(target, snapshot) {
+  if (!target) return;
+  try {
+    const text = JSON.stringify(snapshot);
+    const count = Math.ceil(text.length / MP_SHARED_CACHE_CHUNK_) || 1;
+    if (count > MP_SHARED_CACHE_MAX_CHUNKS_) return;
+    const values = {};
+    for (let index = 0; index < count; index += 1) values[target.base + ':' + index] = text.substr(index * MP_SHARED_CACHE_CHUNK_, MP_SHARED_CACHE_CHUNK_);
+    target.cache.putAll(values, MP_SHARED_CACHE_SECONDS_);
+    target.cache.put(target.base, String(count), MP_SHARED_CACHE_SECONDS_);
+  } catch (error) { /* too large or cache unavailable: just read the sheet next time */ }
+}
+
+/** One call reads the headers and every row. */
+function mpReadSheetRecords_(sheetName) {
+  const values = mpSheet_(sheetName).getDataRange().getValues();
+  const headers = (values[0] || []).map(function(value) { return String(value); });
+  if (!headers.length || !headers[0]) throw new Error('Missing headers in ' + sheetName + '.');
+  const records = [];
+  for (let index = 1; index < values.length; index += 1) {
+    const row = values[index];
+    if (!row.some(function(value) { return value !== ''; })) continue;
+    const record = {};
+    headers.forEach(function(header, column) { record[header] = row[column] instanceof Date ? mpDateIso_(row[column], header, false) : row[column]; });
+    record._rowNumber = index + 1;
+    records.push(record);
+  }
+  return { headers: headers, records: records };
 }
 
 /** Re-entrant script lock: a nested workflow reuses the lock already held. */
@@ -243,29 +333,28 @@ function mpHeaders_(sheet) {
   return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
 }
 
-/** Returns a private copy of the sheet's records; callers may mutate it. */
+/**
+ * Returns a private copy of the sheet's records; callers may mutate it.
+ * Outside the write lock a shared snapshot may be used; inside it the sheet is
+ * always read, so read-modify-write workflows see the latest data.
+ */
 function mpRows_(sheetName) {
+  if (!MP_SCHEMAS[sheetName]) throw new Error('Unknown entity: ' + sheetName + '.');
   const key = mpCurrentDatabaseId_() + '|' + sheetName;
   let cached = MP_ROWS_CACHE_[key];
   if (!cached) {
-    const sheet = mpSheet_(sheetName);
-    const headers = mpHeaders_(sheet);
-    const lastRow = sheet.getLastRow();
-    let records = [];
-    if (lastRow >= 2) {
-      const values = sheet.getRange(2, 1, lastRow - 1, headers.length).getValues();
-      records = values.map(function(row, index) {
-        if (!row.some(function(value) { return value !== ''; })) return null;
-        const record = {};
-        headers.forEach(function(header, column) { record[header] = row[column] instanceof Date ? mpDateIso_(row[column], header, false) : row[column]; });
-        record._rowNumber = index + 2;
-        return record;
-      }).filter(function(record) { return record !== null; });
+    const target = mpSnapshotTarget_(sheetName);
+    if (MP_LOCK_DEPTH_ === 0) cached = mpReadSnapshot_(target);
+    if (!cached) {
+      cached = mpReadSheetRecords_(sheetName);
+      mpWriteSnapshot_(target, cached);
     }
-    cached = { sheet: sheet, headers: headers, records: records };
     MP_ROWS_CACHE_[key] = cached;
   }
-  return { sheet: cached.sheet, headers: cached.headers.slice(), records: mpDeepClone_(cached.records) };
+  const result = { headers: cached.headers.slice(), records: mpDeepClone_(cached.records) };
+  // The spreadsheet is opened only when a caller actually writes.
+  Object.defineProperty(result, 'sheet', { enumerable: true, get: function() { return mpSheet_(sheetName); } });
+  return result;
 }
 
 function mpRecordValues_(headers, record) {
@@ -273,9 +362,9 @@ function mpRecordValues_(headers, record) {
 }
 
 function mpWriteRecordChecked_(sheet, headers, rowNumber, record) {
-  mpInvalidateRows_(sheet.getName());
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([mpRecordValues_(headers, record)]);
   SpreadsheetApp.flush();
+  mpInvalidateRows_(sheet.getName());
   const versionIndex = headers.indexOf('Version');
   const persisted = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
   if (String(persisted[0]) !== String(record[headers[0]]) || (versionIndex !== -1 && Number(persisted[versionIndex]) !== Number(record.Version))) throw new Error('Spreadsheet write verification failed for ' + sheet.getName() + '.');
@@ -715,7 +804,7 @@ function mpSeedSettings_(spreadsheet) {
   const known = {}; existing.forEach(function(row) { if (row[0]) known[row[0]] = row[1]; });
   const rows = [];
   Object.keys(MP_DEFAULT_SETTINGS).forEach(function(key) { if (known[key] === undefined) rows.push([key, JSON.stringify(MP_DEFAULT_SETTINGS[key]), mpNowIso_(), 'SYSTEM', 1]); });
-  if (rows.length) { mpInvalidateRows_('Settings'); sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows); }
+  if (rows.length) { sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows); mpInvalidateRows_('Settings'); }
   return { added: rows.map(function(row) { return row[0]; }) };
 }
 
