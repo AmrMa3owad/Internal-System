@@ -163,6 +163,48 @@ runtime.advanceCacheClock(16 * 60 * 1000);
 newRequest();
 check('cache: hand edits in the sheet appear after the 15-minute cache window', as(OWNER, 'apiGet', 'Clients', cacheClient.data.ClientID).data.Nationality === 'Egyptian');
 
+// Live updates: a cache-only "what changed?" check; screens refresh when their sheets change.
+{
+  const { STATS, resetStats } = require('./apps-script-runtime');
+  newRequest();
+  const first = as(LAWYER, 'apiSyncState', '');
+  newRequest();
+  resetStats();
+  const again = as(LAWYER, 'apiSyncState', first.data && first.data.versions.Conversations);
+  const reads = STATS.reads + STATS.openById;
+  check('live: the check reads no spreadsheet and skips the unread count when chats did not change', first.ok && again.ok && reads === 0 && again.data.unread === null
+    && JSON.stringify(first.data.versions) === JSON.stringify(again.data.versions) && typeof first.data.unread === 'number', JSON.stringify({ reads, first: first.error, again: again.data && again.data.unread }));
+  newRequest();
+  as(OWNER, 'apiCreate', 'Leads', { FullName: 'Live Update Lead', Phone: '+201009998877', Source: 'PHONE' });
+  newRequest();
+  const after = as(LAWYER, 'apiSyncState', first.data.versions.Conversations).data.versions;
+  const changed = Object.keys(after).filter((sheet) => after[sheet] !== first.data.versions[sheet]);
+  check('live: another person adding a lead marks only Leads (and its history) as changed', changed.indexOf('Leads') !== -1 && changed.every((sheet) => ['Leads', 'Activities'].indexOf(sheet) !== -1), JSON.stringify(changed));
+  check('live: signed-out visitors cannot use the check', as('', 'apiSyncState', '').ok === false);
+
+  // Hand edits in the spreadsheet: the installed "on change" trigger marks the sheet.
+  const changeTriggers = runtime.triggers.filter((trigger) => trigger.getHandlerFunction() === 'databaseChangeTrigger');
+  check('live: install watches the database for hand edits', changeTriggers.length === 1 && changeTriggers[0].spec.event === 'change' && changeTriggers[0].spec.spreadsheet === fn('mpCurrentDatabaseId_')());
+  newRequest();
+  const beforeEdit = as(OWNER, 'apiSyncState', '').data.versions;
+  const edited = fn('databaseChangeTrigger')({ triggerUid: changeTriggers[0].getUniqueId(), source: { getActiveSheet: () => ({ getName: () => 'Cases' }) } });
+  const forged = fn('databaseChangeTrigger')({ triggerUid: 'forged', source: { getActiveSheet: () => ({ getName: () => 'Leads' }) } });
+  newRequest();
+  const afterEdit = as(OWNER, 'apiSyncState', '').data.versions;
+  check('live: a hand edit marks that sheet changed; a forged call is refused', edited.ok && forged.ok === false && afterEdit.Cases !== beforeEdit.Cases && afterEdit.Leads === beforeEdit.Leads);
+  // Type a value straight into the Clients sheet, as a person would, then let the trigger fire.
+  newRequest();
+  as(OWNER, 'apiGet', 'Clients', cacheClient.data.ClientID); // warm the cache with the old value
+  const sheet = fn('mpGetDatabase_')().getSheetByName('Clients');
+  const column = sheet.rows[0].indexOf('Notes');
+  const rowIndex = sheet.rows.findIndex((row) => row && row[0] === cacheClient.data.ClientID);
+  sheet.rows[rowIndex][column] = 'typed by hand, seen at once';
+  fn('databaseChangeTrigger')({ triggerUid: changeTriggers[0].getUniqueId(), source: { getActiveSheet: () => ({ getName: () => 'Clients' }) } });
+  newRequest();
+  const handEdited = as(OWNER, 'apiGet', 'Clients', cacheClient.data.ClientID);
+  check('live: a hand edit is visible on the next load, without the 15-minute wait', handEdited.ok && handEdited.data.Notes === 'typed by hand, seen at once', JSON.stringify(handEdited.data && handEdited.data.Notes));
+}
+
 // Email-code sign-in for personal Gmail accounts (Google does not identify them).
 runtime.setActiveEmail('');
 const viaCall = (token, name, args) => fn('apiCall')(token, name, args || []);

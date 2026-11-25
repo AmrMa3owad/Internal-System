@@ -191,7 +191,10 @@ function mpApplySheetValidation_(sheet, headers) {
     FollowUps: { Priority: MP_CONFIG.PRIORITIES, Status: MP_CONFIG.FOLLOW_UP_STATUSES }, Documents: { ConfidentialityLevel: MP_CONFIG.CONFIDENTIALITY_LEVELS },
     ExternalPartners: { PartnerType: MP_CONFIG.PARTNER_TYPES, Status: MP_CONFIG.PARTNER_STATUSES },
     Referrals: { Scope: MP_CONFIG.REFERRAL_SCOPES, ExternalWork: MP_CONFIG.REFERRAL_WORK_TYPES, Status: MP_CONFIG.REFERRAL_STATUSES },
-    ReferralPayments: { PaymentMethod: MP_CONFIG.PAYMENT_METHODS }
+    ReferralPayments: { PaymentMethod: MP_CONFIG.PAYMENT_METHODS },
+    Conversations: { Channel: MP_CONFIG.CHANNELS, Status: MP_CONFIG.CONVERSATION_STATUSES },
+    Messages: { Direction: MP_CONFIG.MESSAGE_DIRECTIONS, Kind: MP_CONFIG.MESSAGE_KINDS, Status: MP_CONFIG.MESSAGE_STATUSES },
+    WebhookEvents: { ProcessingStatus: MP_CONFIG.WEBHOOK_STATUSES }
   }[sheet.getName()] || {};
   Object.keys(validations).forEach(function(header) {
     const column = headers.indexOf(header) + 1;
@@ -341,7 +344,7 @@ function mpSheet_(sheetName) {
  * inserted at their schema position (existing data moves with its column, so
  * nothing is lost or overwritten) and dropdown rules are refreshed.
  */
-const MP_SCHEMA_VERSION_ = '2026-11-25';
+const MP_SCHEMA_VERSION_ = '2026-11-26';
 const MP_SCHEMA_VERSION_PROPERTY_ = 'MP_SCHEMA_VERSION';
 var MP_SCHEMA_CHECKED_ = false;
 

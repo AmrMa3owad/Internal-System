@@ -85,6 +85,7 @@ function mpRecordInScope_(scope, entity, record) {
     }
     case 'Assignments': return !!(scope[record.EntityType] || {})[record.EntityID];
     case 'Referrals': return !!scope.Referrals[record.ReferralID];
+    case 'Conversations': return record.AssignedTo === scope.userId || (!!record.LeadID && !!scope.Leads[record.LeadID]) || (!!record.ClientID && !!scope.Clients[record.ClientID]);
     case 'ReferralWork':
     case 'ReferralPayments': return !!scope.Referrals[record.ReferralID];
     default: return true;

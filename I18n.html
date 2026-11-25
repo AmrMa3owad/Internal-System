@@ -71,6 +71,31 @@ window.MP_I18N = {
       intakeTitle: 'Website leads', intakeNote: 'Inquiries from your website form (or WhatsApp and Instagram through an automation tool) arrive here as new leads automatically, and owners and partners get an email.',
       intakeOn: 'On', intakeOff: 'Off', intakeLink: 'Send form submissions (POST) to this private link:', intakeFields: 'Fields: name, phone, email, message, source (WEBSITE, WHATSAPP, INSTAGRAM, FACEBOOK, TIKTOK…).',
       intakeNewKey: 'Issue a new link', intakeNewKeyConfirm: 'The current link will stop working. Continue?', copyLink: 'Copy link', copied: 'Copied.',
+      navInbox: 'Inbox', unreadMessages: 'Unread messages', chatsWaitingN: '{n} chat(s) waiting for a reply', inboxClear: 'All caught up',
+      chatInCrm: 'WhatsApp chat', searchChats: 'Search chats…', chatsOpen: 'Open', chatsUnread: 'Unread', chatsMine: 'Mine', chatsClosed: 'Closed', allChannels: 'All',
+      noChatsTitle: 'No chats here', noChatsText: 'New WhatsApp, Messenger, and Instagram messages appear here automatically.',
+      noChannelsText: 'Once an owner connects WhatsApp and the Facebook Page in Settings → Channels, every message arrives here.',
+      unknownContact: 'Unknown contact', kindAutoReply: 'Auto-reply', kindTemplate: 'Template', kindComment: 'Comment', kindLeadForm: 'Lead form', kindNote: 'Note',
+      automatic: 'Automatic', fromMetaInbox: 'Sent from Meta', client: 'Client', lead: 'Lead', assignChat: 'Assign this chat', chatAssigned: 'Chat assigned.',
+      chatClosed: 'Chat closed.', chatReopened: 'Chat reopened.', closeChat: 'Close', reopenChat: 'Reopen',
+      channelNotConnected: 'This channel is not connected yet. An owner connects it in Settings → Channels.',
+      windowNeedsTemplate: 'More than 24 hours since their last message: WhatsApp allows only an approved template until they reply.',
+      windowClosed: 'More than 24 hours since their last message: Meta allows a reply only after they write again.',
+      commentReplied: 'You already replied privately to this comment. Continue in their chat once they answer.',
+      commentExpired: 'Meta allows a private reply to a comment only within 7 days.',
+      templateValue: 'Value {n}', sendTemplate: 'Send template', writeMessage: 'Write a message instead', typeReply: 'Type a reply… (Ctrl+Enter to send)', send: 'Send',
+      windowOpenUntil: 'Free replies allowed until {d}', useTemplate: 'Use a template', pickChat: 'Pick a chat', pickChatText: 'Choose a conversation on the left to read and reply.',
+      channelsTitle: 'Channels: WhatsApp, Facebook, Instagram, TikTok', channelsNote: 'Messages, comments, and lead-ad forms arrive as leads and chats. The setup guide (CHANNELS_SETUP.md) explains where each value comes from.',
+      secretWaPhoneId: 'WhatsApp phone number ID', secretWaToken: 'WhatsApp access token', secretPageId: 'Facebook Page ID', secretPageToken: 'Facebook Page access token',
+      secretSet: 'Saved ({x}) — type to replace', secretNotSet: 'Not set', connectedShort: 'Set', testWhatsApp: 'Test WhatsApp', testPage: 'Test Facebook/Instagram', testOk: 'Connected: {x}',
+      connections: 'Connections', relayTitle: 'Relay link', relayNote: 'Paste this into the Cloudflare relay as CRM_RELAY_URL. Keep it private.',
+      relayNone: 'No relay link yet.', relayCreate: 'Create relay link', relayNewConfirm: 'The current relay link will stop working until you update the relay. Continue?',
+      relayLast: 'Last delivery: {d}', relayNever: 'Nothing received yet.', autoReplyTitle: 'Instant auto-reply', autoReplyOn: 'Reply automatically to the first message',
+      commentsPrivate: 'Comments (private reply)', autoReplyAr: 'Arabic reply', autoReplyEn: 'English reply', quietDays: 'Reply again after this many quiet days',
+      templatesTitle: 'WhatsApp templates', templatesNote: 'Add each template exactly as approved in Meta: name, language code, a label for your team, and how many variables it has.',
+      templateLabel: 'Label for the team', templateParams: 'Number of values', remove: 'Remove', addTemplate: 'Add template',
+      remindersWhatsApp: 'WhatsApp reminder the day before each consultation', reminderTemplate: 'Reminder template (values: name, date, time)',
+      saveChannels: 'Save channel settings', retry: 'Retry', recentDeliveries: 'Recent deliveries',
       appearance: 'Appearance', themeLight: 'Light', themeDark: 'Dark', themeAuto: 'Auto', themeAutoHint: 'Auto follows your device', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu',
       daySummary: '{n} thing(s) need your attention today.', daySummaryClear: 'Nothing urgent today — a calm day ahead.'
     },
@@ -140,6 +165,31 @@ window.MP_I18N = {
       intakeTitle: 'عملاء الموقع', intakeNote: 'تصل استفسارات نموذج موقعك (أو واتساب وإنستجرام عبر أداة ربط) هنا كعملاء محتملين جدد تلقائيًا، ويصل بريد للمالك والشركاء.',
       intakeOn: 'مفعّل', intakeOff: 'متوقف', intakeLink: 'أرسل بيانات النموذج (POST) إلى هذا الرابط الخاص:', intakeFields: 'الحقول: name، phone، email، message، source (WEBSITE، WHATSAPP، INSTAGRAM، FACEBOOK، TIKTOK…).',
       intakeNewKey: 'إصدار رابط جديد', intakeNewKeyConfirm: 'سيتوقف الرابط الحالي عن العمل. هل تريد المتابعة؟', copyLink: 'نسخ الرابط', copied: 'تم النسخ.',
+      navInbox: 'صندوق الرسائل', unreadMessages: 'رسائل غير مقروءة', chatsWaitingN: '{n} محادثة تنتظر الرد', inboxClear: 'لا شيء ينتظرك',
+      chatInCrm: 'محادثة واتساب', searchChats: 'ابحث في المحادثات…', chatsOpen: 'مفتوحة', chatsUnread: 'غير مقروءة', chatsMine: 'محادثاتي', chatsClosed: 'مغلقة', allChannels: 'الكل',
+      noChatsTitle: 'لا توجد محادثات هنا', noChatsText: 'تظهر هنا تلقائيًا رسائل واتساب وماسنجر وإنستجرام الجديدة.',
+      noChannelsText: 'بعد أن يربط المالك واتساب وصفحة فيسبوك من الإعدادات ← القنوات، تصل كل الرسائل إلى هنا.',
+      unknownContact: 'جهة اتصال غير معروفة', kindAutoReply: 'رد تلقائي', kindTemplate: 'قالب', kindComment: 'تعليق', kindLeadForm: 'نموذج إعلان', kindNote: 'ملاحظة',
+      automatic: 'تلقائي', fromMetaInbox: 'أُرسلت من Meta', client: 'موكل', lead: 'عميل محتمل', assignChat: 'إسناد المحادثة', chatAssigned: 'تم إسناد المحادثة.',
+      chatClosed: 'تم إغلاق المحادثة.', chatReopened: 'أعيد فتح المحادثة.', closeChat: 'إغلاق', reopenChat: 'إعادة فتح',
+      channelNotConnected: 'هذه القناة غير مربوطة بعد. يربطها المالك من الإعدادات ← القنوات.',
+      windowNeedsTemplate: 'مرّ أكثر من 24 ساعة على آخر رسالة منهم: يسمح واتساب بقالب معتمد فقط حتى يردّوا.',
+      windowClosed: 'مرّ أكثر من 24 ساعة على آخر رسالة منهم: تسمح Meta بالرد فقط بعد أن يكتبوا مرة أخرى.',
+      commentReplied: 'رددت بالفعل على هذا التعليق في رسالة خاصة. تابع في محادثتهم بعد أن يردّوا.',
+      commentExpired: 'تسمح Meta بالرد الخاص على التعليق خلال 7 أيام فقط.',
+      templateValue: 'القيمة {n}', sendTemplate: 'إرسال القالب', writeMessage: 'كتابة رسالة بدلًا من ذلك', typeReply: 'اكتب ردًا… (Ctrl+Enter للإرسال)', send: 'إرسال',
+      windowOpenUntil: 'الرد الحر متاح حتى {d}', useTemplate: 'استخدام قالب', pickChat: 'اختر محادثة', pickChatText: 'اختر محادثة من القائمة لقراءتها والرد عليها.',
+      channelsTitle: 'القنوات: واتساب وفيسبوك وإنستجرام وتيك توك', channelsNote: 'تصل الرسائل والتعليقات ونماذج الإعلانات كعملاء محتملين ومحادثات. يشرح دليل الإعداد (CHANNELS_SETUP.md) مصدر كل قيمة.',
+      secretWaPhoneId: 'معرّف رقم واتساب (Phone number ID)', secretWaToken: 'رمز وصول واتساب', secretPageId: 'معرّف صفحة فيسبوك', secretPageToken: 'رمز وصول صفحة فيسبوك',
+      secretSet: 'محفوظ ({x}) — اكتب للاستبدال', secretNotSet: 'غير محدد', connectedShort: 'محفوظ', testWhatsApp: 'اختبار واتساب', testPage: 'اختبار فيسبوك/إنستجرام', testOk: 'متصل: {x}',
+      connections: 'الربط', relayTitle: 'رابط الوسيط', relayNote: 'الصق هذا الرابط في وسيط Cloudflare باسم CRM_RELAY_URL. حافظ على سريته.',
+      relayNone: 'لا يوجد رابط وسيط بعد.', relayCreate: 'إنشاء رابط الوسيط', relayNewConfirm: 'سيتوقف رابط الوسيط الحالي حتى تحدّث الوسيط. هل تريد المتابعة؟',
+      relayLast: 'آخر استلام: {d}', relayNever: 'لم يصل شيء بعد.', autoReplyTitle: 'الرد التلقائي الفوري', autoReplyOn: 'الرد تلقائيًا على أول رسالة',
+      commentsPrivate: 'التعليقات (رد خاص)', autoReplyAr: 'الرد بالعربية', autoReplyEn: 'الرد بالإنجليزية', quietDays: 'إعادة الرد بعد هذا العدد من أيام التوقف',
+      templatesTitle: 'قوالب واتساب', templatesNote: 'أضف كل قالب تمامًا كما اعتمدته Meta: الاسم، ورمز اللغة، واسمًا لفريقك، وعدد المتغيرات فيه.',
+      templateLabel: 'الاسم للفريق', templateParams: 'عدد القيم', remove: 'حذف', addTemplate: 'إضافة قالب',
+      remindersWhatsApp: 'تذكير واتساب قبل كل استشارة بيوم', reminderTemplate: 'قالب التذكير (القيم: الاسم، التاريخ، الوقت)',
+      saveChannels: 'حفظ إعدادات القنوات', retry: 'إعادة المحاولة', recentDeliveries: 'آخر ما وصل',
       appearance: 'المظهر', themeLight: 'فاتح', themeDark: 'داكن', themeAuto: 'تلقائي', themeAutoHint: 'التلقائي يتبع إعدادات جهازك', collapseMenu: 'تصغير القائمة', expandMenu: 'توسيع القائمة',
       daySummary: '{n} بند يحتاج إلى متابعتك اليوم.', daySummaryClear: 'لا شيء عاجل اليوم — يوم هادئ.'
     }
@@ -150,14 +200,14 @@ window.MP_I18N = {
       Consultations: ['Consultations', 'Consultation'], FollowUps: ['Tasks', 'Task'], Transactions: ['Finance', 'Payment'],
       Documents: ['Documents', 'Document'], Users: ['Users', 'User'],
       ExternalPartners: ['External lawyers', 'External lawyer or firm'], Referrals: ['Referrals & jobs', 'Referral'],
-      ReferralWork: ['Our tasks & expenses', 'Task'], ReferralPayments: ['Partner payments', 'Partner payment']
+      ReferralWork: ['Our tasks & expenses', 'Task'], ReferralPayments: ['Partner payments', 'Partner payment'], Conversations: ['Chats', 'Chat']
     },
     ar: {
       Leads: ['العملاء المحتملون', 'عميل محتمل'], Clients: ['الموكلون', 'موكل'], Companies: ['الشركات', 'شركة'], Cases: ['القضايا', 'قضية'],
       Consultations: ['الاستشارات', 'استشارة'], FollowUps: ['المهام', 'مهمة'], Transactions: ['الحسابات', 'دفعة'],
       Documents: ['المستندات', 'مستند'], Users: ['المستخدمون', 'مستخدم'],
       ExternalPartners: ['المحامون والمكاتب الخارجية', 'جهة خارجية'], Referrals: ['الإحالات والمهام', 'إحالة'],
-      ReferralWork: ['مهامنا ومصروفاتها', 'مهمة'], ReferralPayments: ['مدفوعات الجهات الخارجية', 'دفعة من جهة خارجية']
+      ReferralWork: ['مهامنا ومصروفاتها', 'مهمة'], ReferralPayments: ['مدفوعات الجهات الخارجية', 'دفعة من جهة خارجية'], Conversations: ['المحادثات', 'محادثة']
     }
   },
   fields: {
@@ -172,7 +222,9 @@ window.MP_I18N = {
       FinalProfit: 'Their final profit', ExpectedShare: 'Our share', AdminFeesTotal: 'Our work fees', TotalDue: 'Total owed to us',
       TotalReceived: 'Received', Balance: 'Still owed', CreatedBy: 'Referred by', WorkDate: 'Date', DoneBy: 'Done by',
       Title: 'Title', AcceptedAt: 'Partner accepted on', AcceptedBy: 'Acceptance confirmed by', Expenses: 'Expenses we paid (reimbursed)', ExpensesTotal: 'Expenses they reimburse',
-      PaymentNote: 'Reason (when set by hand)'
+      PaymentNote: 'Reason (when set by hand)', SocialProfile: 'Social profile', Channel: 'Channel', ContactName: 'Name', ContactHandle: 'Contact',
+      LastMessageAt: 'Last message', LastInboundAt: 'Last message from them', LastMessagePreview: 'Last message', UnreadCount: 'Unread', Direction: 'Direction', Kind: 'Type',
+      Body: 'Message', SentBy: 'Sent by', SentAt: 'Sent', Error: 'Error', EventType: 'Event', ReceivedAt: 'Received', ProcessingStatus: 'Result'
     },
     ar: {
       FullName: 'الاسم الكامل', Email: 'البريد الإلكتروني', Role: 'الدور', Status: 'الحالة', Language: 'اللغة', CreatedAt: 'تاريخ الإنشاء',
@@ -195,7 +247,9 @@ window.MP_I18N = {
       FinalProfit: 'صافي ربحهم النهائي', ExpectedShare: 'حصتنا', AdminFeesTotal: 'رسوم أعمالنا', TotalDue: 'إجمالي المستحق لنا',
       TotalReceived: 'المستلم', Balance: 'المتبقي', CreatedBy: 'أحالها', WorkDate: 'التاريخ', DoneBy: 'نفّذها',
       AcceptedAt: 'تاريخ قبول الجهة', AcceptedBy: 'أكّد القبول', Expenses: 'مصروفات دفعناها (تُسترد)', ExpensesTotal: 'مصروفات يستردونها لنا',
-      PaymentNote: 'السبب (عند التحديد يدويًا)'
+      PaymentNote: 'السبب (عند التحديد يدويًا)', SocialProfile: 'الحساب على مواقع التواصل', Channel: 'القناة', ContactName: 'الاسم', ContactHandle: 'وسيلة التواصل',
+      LastMessageAt: 'آخر رسالة', LastInboundAt: 'آخر رسالة منهم', LastMessagePreview: 'آخر رسالة', UnreadCount: 'غير مقروءة', Direction: 'الاتجاه', Kind: 'النوع',
+      Body: 'الرسالة', SentBy: 'أرسلها', SentAt: 'وقت الإرسال', Error: 'الخطأ', EventType: 'الحدث', ReceivedAt: 'وقت الاستلام', ProcessingStatus: 'النتيجة'
     }
   },
   enums: {
@@ -218,7 +272,10 @@ window.MP_I18N = {
       LIMIT_CLEARED: 'تم السماح بإعادة المحاولة', SESSION_REVOKED: 'تم تسجيل خروج الجهاز',
       FIRM: 'مكتب محاماة', FULL: 'يتولون كل العمل', SHARED: 'نشارك في جزء من العمل', COURT_HEARINGS: 'حضور الجلسات',
       WHOLE_CASE: 'القضية كاملة', PART_OF_CASE: 'جزء من القضية', PROPOSED: 'مقترحة', SETTLED: 'تمت التسوية',
-      ADMIN_ONLY: 'أعمال إدارية لهم (فريقنا)', LEAD_INTAKE_KEY_ISSUED: 'إصدار رابط عملاء الموقع', LEAD_INTAKE_DISABLED: 'إيقاف عملاء الموقع'
+      ADMIN_ONLY: 'أعمال إدارية لهم (فريقنا)', LEAD_INTAKE_KEY_ISSUED: 'إصدار رابط عملاء الموقع', LEAD_INTAKE_DISABLED: 'إيقاف عملاء الموقع',
+      MESSENGER: 'ماسنجر', IN: 'واردة', OUT: 'صادرة', TEXT: 'نص', MEDIA: 'وسائط', COMMENT: 'تعليق', LEAD_FORM: 'نموذج إعلان', AUTO_REPLY: 'رد تلقائي', TEMPLATE: 'قالب', NOTE: 'ملاحظة',
+      RECEIVED: 'مستلمة', SENT: 'أُرسلت', DELIVERED: 'وصلت', READ: 'قُرئت', FAILED: 'فشلت', PROCESSED: 'تمت', IGNORED: 'تم تجاهلها', CLOSED: 'مغلقة', OPEN: 'مفتوحة',
+      CHANNELS_UPDATED: 'تحديث إعدادات القنوات', CHANNEL_SECRET_CHANGED: 'تغيير بيانات ربط قناة', RELAY_KEY_ISSUED: 'إصدار رابط الوسيط'
     },
     en: {
       EN: 'English', AR: 'العربية (Arabic)', CODE_SENT: 'Code sent', CODE_UNKNOWN_EMAIL: 'Unknown email', CODE_RATE_LIMITED: 'Too many requests',
@@ -227,7 +284,10 @@ window.MP_I18N = {
       LIMIT_CLEARED: 'Retry allowed', SESSION_REVOKED: 'Device signed out',
       LAWYER: 'Lawyer', FIRM: 'Law firm', FULL: 'They handle everything', SHARED: 'We do part of the work', COURT_HEARINGS: 'Court hearings',
       WHOLE_CASE: 'The whole case', PART_OF_CASE: 'Part of the case', PROPOSED: 'Proposed', SETTLED: 'Settled',
-      ADMIN_ONLY: 'Admin work for them (our team)', LEAD_INTAKE_KEY_ISSUED: 'Website-lead link issued', LEAD_INTAKE_DISABLED: 'Website leads turned off'
+      ADMIN_ONLY: 'Admin work for them (our team)', LEAD_INTAKE_KEY_ISSUED: 'Website-lead link issued', LEAD_INTAKE_DISABLED: 'Website leads turned off',
+      WHATSAPP: 'WhatsApp', TIKTOK: 'TikTok', INSTAGRAM: 'Instagram', FACEBOOK: 'Facebook', MESSENGER: 'Messenger', IN: 'Incoming', OUT: 'Outgoing', TEXT: 'Text', MEDIA: 'Media', COMMENT: 'Comment', LEAD_FORM: 'Lead form', AUTO_REPLY: 'Auto-reply', TEMPLATE: 'Template', NOTE: 'Note',
+      RECEIVED: 'Received', SENT: 'Sent', DELIVERED: 'Delivered', READ: 'Read', FAILED: 'Failed', PROCESSED: 'Processed', IGNORED: 'Ignored', CLOSED: 'Closed', OPEN: 'Open',
+      CHANNELS_UPDATED: 'Channel settings updated', CHANNEL_SECRET_CHANGED: 'Channel connection changed', RELAY_KEY_ISSUED: 'Relay link issued'
     }
   },
   settings: {
@@ -245,7 +305,8 @@ window.MP_I18N = {
       PAYMENT_STATUS_RECALCULATED: 'تم تحديث حالة الدفع', LINKED_TO_CLIENT: 'تم الربط بالموكل', DUPLICATE_REVIEW_CONFIRMED: 'تم الحفظ بعد مراجعة التكرار',
       TEAM_MEMBER_ADDED: 'تمت إضافة عضو إلى الفريق', TEAM_MEMBER_REMOVED: 'تمت إزالة عضو من الفريق', DOWNLOADED: 'تم التنزيل',
       REFERRAL_TOTALS_RECALCULATED: 'تم تحديث المبالغ المستحقة', REFERRAL_SETTLED: 'تمت التسوية بالكامل', REFERRAL_REOPENED: 'أعيد فتحها بعد تعديل دفعة',
-      PAYMENT_STATUS_SET_MANUALLY: 'تم تحديد حالة الدفع يدويًا', CAPTURED_AUTOMATICALLY: 'وصل تلقائيًا من نموذج الموقع أو قناة تواصل'
+      PAYMENT_STATUS_SET_MANUALLY: 'تم تحديد حالة الدفع يدويًا', CAPTURED_AUTOMATICALLY: 'وصل تلقائيًا من نموذج الموقع أو قناة تواصل',
+      WHATSAPP_REMINDER_SENT: 'أُرسل تذكير واتساب'
     }
   },
   /** Arabic for the most common server messages; unmatched messages are shown as sent. */
@@ -263,7 +324,15 @@ window.MP_I18N = {
     [/Only owners and partners can/, 'المالك والشركاء فقط يمكنهم تغيير الإسناد.'],
     [/Phone is invalid/, 'رقم الهاتف غير صحيح.'],
     [/Email is invalid/, 'البريد الإلكتروني غير صحيح.'],
-    [/needs a phone number or email/, 'يجب إدخال رقم هاتف أو بريد إلكتروني.'],
+    [/needs a phone number or email|needs a phone number, email address, or social profile/, 'يجب إدخال رقم هاتف أو بريد إلكتروني أو حساب تواصل اجتماعي.'],
+    [/WhatsApp only allows an approved template/, 'مرّ أكثر من 24 ساعة: يسمح واتساب بقالب معتمد فقط الآن.'],
+    [/Meta only allows a reply after they write again/, 'مرّ أكثر من 24 ساعة: تسمح Meta بالرد فقط بعد أن يكتبوا مرة أخرى.'],
+    [/one private reply per comment/, 'تسمح Meta برد خاص واحد لكل تعليق.'],
+    [/private reply to a comment only within 7 days/, 'تسمح Meta بالرد الخاص على التعليق خلال 7 أيام فقط.'],
+    [/This channel is not connected yet/, 'هذه القناة غير مربوطة بعد.'],
+    [/Meta refused the request/, 'رفضت Meta الطلب. راجع الرمز والمعرّفات في الإعدادات ← القنوات.'],
+    [/Fill in all \d+ template value/, 'املأ كل قيم القالب.'],
+    [/no usable phone number for WhatsApp/, 'لا يوجد رقم هاتف صالح لواتساب.'],
     [/must be an ISO date|not a valid calendar date|valid ISO-compatible date/, 'التاريخ غير صحيح.'],
     [/must be a valid number/, 'يجب إدخال رقم صحيح.'],
     [/cannot be negative/, 'لا يمكن أن تكون القيمة سالبة.'],

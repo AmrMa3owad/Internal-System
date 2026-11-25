@@ -653,6 +653,10 @@ function installMohamyPlus() {
   log('Database spreadsheet: ' + database.getUrl());
   log('Documents folder created this run: ' + (setup.data.documentsFolderCreated ? 'yes' : 'no (already exists)'));
   try {
+    mpInstallChangeTrigger_();
+    log('Live updates: hand edits in the spreadsheet now refresh open screens.');
+  } catch (error) { log('Live updates for hand edits could not be turned on: ' + error.message + ' (app changes still update instantly).'); }
+  try {
     if (!mpBackupTriggers_().length) mpInstallDailyBackups_();
     log('Daily backups: on (' + MP_CONFIG.BACKUP_HOUR + ':00 Cairo time, newest ' + MP_CONFIG.BACKUP_KEEP + ' kept in "' + MP_CONFIG.BACKUP_FOLDER_NAME + '").');
   } catch (error) { log('Daily backups could not be turned on: ' + error.message + ' (turn them on in Settings).'); }

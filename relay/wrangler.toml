@@ -1,0 +1,6 @@
+# Optional: deploy with Wrangler instead of pasting worker.js into the Cloudflare dashboard.
+#   npx wrangler deploy
+#   npx wrangler secret put CRM_RELAY_URL      (and META_APP_SECRET, META_VERIFY_TOKEN, TIKTOK_TOKEN)
+name = "mohamy-plus-relay"
+main = "worker.js"
+compatibility_date = "2026-11-01"

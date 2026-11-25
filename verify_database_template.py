@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from generate_database_template import ROOT, WORKBOOK_FILE, load_configuration
 
 
-REQUIRED_SHEETS = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog", "ExternalPartners", "Referrals", "ReferralWork", "ReferralPayments"]
+REQUIRED_SHEETS = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog", "ExternalPartners", "Referrals", "ReferralWork", "ReferralPayments", "Conversations", "Messages", "WebhookEvents"]
 EXPECTED_VALIDATIONS = {
     "Users": {"Role": "ROLES", "Status": "USER_STATUSES", "Language": "LANGUAGES"},
     "Leads": {"ClientType": "CLIENT_TYPES", "Source": "LEAD_SOURCES", "Priority": "PRIORITIES", "Status": "LEAD_STATUSES"},

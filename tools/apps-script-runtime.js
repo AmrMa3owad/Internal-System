@@ -20,6 +20,7 @@ function formatDate(date, timeZone, pattern) {
   new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
     .formatToParts(date).forEach((part) => { parts[part.type] = part.value; });
   if (pattern === 'yyyy-MM-dd') return `${parts.year}-${parts.month}-${parts.day}`;
+  if (pattern === 'HH:mm') return `${parts.hour}:${parts.minute}`;
   if (pattern === 'yyyy-MM-dd HH:mm') return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
   if (pattern !== "yyyy-MM-dd'T'HH:mm:ssXXX") throw new Error('Fake formatDate does not support pattern ' + pattern);
   const localAsUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
@@ -149,6 +150,7 @@ function createRuntime(options) {
   const driveItems = new Map();
   const triggers = [];
   const outbox = [];
+  const graph = { calls: [], leads: {}, profiles: {}, fail: '' };
   const cache = new Map();
   let clockOffset = 0;
   let fileClock = 0;
@@ -225,6 +227,7 @@ function createRuntime(options) {
         const spec = { handler };
         const builder = {
           timeBased() { return builder; }, everyDays(n) { spec.everyDays = n; return builder; }, atHour(h) { spec.hour = h; return builder; },
+          forSpreadsheet(id) { spec.spreadsheet = id; return builder; }, onChange() { spec.event = 'change'; return builder; },
           inTimezone(tz) { spec.timeZone = tz; return builder; },
           create() {
             const uid = 'trigger-' + crypto.randomBytes(6).toString('hex');
@@ -258,6 +261,28 @@ function createRuntime(options) {
             return file;
           }
         };
+      }
+    },
+    // A small stand-in for Meta's Graph API: records every call and answers like Meta does.
+    UrlFetchApp: {
+      fetch(url, options) {
+        options = options || {};
+        const call = { url, method: String(options.method || 'get').toLowerCase(), payload: options.payload ? JSON.parse(options.payload) : null, auth: (options.headers || {}).Authorization || '' };
+        graph.calls.push(call);
+        const reply = (code, body) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(body) });
+        if (graph.fail) return reply(400, { error: { message: graph.fail, code: 100 } });
+        const path = url.replace(/^https:\/\/graph\.facebook\.com\/v[\d.]+\//, '');
+        const id = decodeURIComponent(path.split(/[/?]/)[0]);
+        if (call.method === 'post' && /\/messages$/.test(path.split('?')[0])) {
+          if (call.payload.messaging_product === 'whatsapp') return reply(200, { messaging_product: 'whatsapp', messages: [{ id: 'wamid.' + crypto.randomBytes(6).toString('hex') }] });
+          return reply(200, { recipient_id: 'r', message_id: 'm_' + crypto.randomBytes(6).toString('hex') });
+        }
+        if (call.method === 'get' && graph.leads[id]) return reply(200, graph.leads[id]);
+        if (call.method === 'get' && /fields=first_name/.test(path)) return reply(200, graph.profiles[id] || { first_name: 'Messenger', last_name: 'Visitor' });
+        if (call.method === 'get' && /fields=name,username/.test(path)) return reply(200, graph.profiles[id] || { name: 'Insta Visitor', username: 'insta.visitor' });
+        if (call.method === 'get' && /display_phone_number/.test(path)) return reply(200, { display_phone_number: '+20 108 050 9733', verified_name: 'Mohamy Plus' });
+        if (call.method === 'get' && /instagram_business_account/.test(path)) return reply(200, { name: 'Mohamy Plus', instagram_business_account: { username: 'mohamyplus' } });
+        return reply(404, { error: { message: 'Unknown object ' + id, code: 803 } });
       }
     },
     ContentService: {
@@ -308,6 +333,7 @@ function createRuntime(options) {
     advanceCacheClock: (ms) => { clockOffset += ms; },
     triggers,
     spreadsheets,
+    graph,
     /** Stores a file outside the documents folder (for the folder-check test). */
     createLooseFile: (name, text) => { const file = new FakeFile(new FakeBlob(Array.from(Buffer.from(text)), 'text/plain', name), null); driveItems.set(file.id, file); return file.id; },
     getActiveEmail: () => activeEmail

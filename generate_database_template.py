@@ -304,7 +304,7 @@ No spreadsheet IDs, credentials, secrets, sample users, fabricated clients, or s
 def generate(write_guide_file: bool = False) -> tuple[Path, Path | None]:
     """Build the workbook. The guide is hand-maintained; only overwrite it on request."""
     schemas, dropdowns, defaults = load_configuration()
-    expected_sheets = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog", "ExternalPartners", "Referrals", "ReferralWork", "ReferralPayments"]
+    expected_sheets = ["Users", "Leads", "Clients", "Companies", "Cases", "Consultations", "Transactions", "FollowUps", "Activities", "Documents", "Settings", "Assignments", "AccessLog", "ExternalPartners", "Referrals", "ReferralWork", "ReferralPayments", "Conversations", "Messages", "WebhookEvents"]
     if list(schemas) != expected_sheets:
         raise ValueError("MP_SCHEMAS does not match the required entity order; generation stopped.")
 

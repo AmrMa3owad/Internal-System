@@ -45,7 +45,12 @@
     swap: ['M17 1l4 4-4 4', 'M3 11V9a4 4 0 0 1 4-4h14', 'M7 23l-4-4 4-4', 'M21 13v2a4 4 0 0 1-4 4H3'],
     sun: [{ c: [12, 12, 4] }, 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.41-1.41', 'M17.66 6.34l1.41-1.41'],
     info: [{ c: [12, 12, 10] }, 'M12 16v-4', 'M12 8h.01'],
-    bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 0 1-3.46 0']
+    bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 0 1-3.46 0'],
+    whatsapp: ['M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.3z', 'M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 .9c-1-.5-2.3-1.8-2.8-2.8l.9-1-1-2z'],
+    messenger: ['M12 2.5C6.7 2.5 2.5 6.4 2.5 11.4c0 2.8 1.3 5.2 3.4 6.8v3.3l3.1-1.7c.9.3 1.9.4 3 .4 5.3 0 9.5-3.9 9.5-8.8S17.3 2.5 12 2.5z', 'M6.8 14l3.4-3.7 2.2 2 3.8-2.4-3.4 3.7-2.2-2z'],
+    instagram: [{ r: [3, 3, 18, 18, 5] }, { c: [12, 12, 4] }, 'M17.5 6.5h.01'],
+    send: ['M22 2L11 13', 'M22 2l-7 20-4-9-9-4z'],
+    template: [{ r: [4, 3, 16, 18, 2] }, 'M8 8h8', 'M8 12h8', 'M8 16h5']
   };
   var SVG_NS = 'http://www.w3.org/2000/svg';
   function icon(name, extraClass) {
@@ -89,8 +94,10 @@
     ReferralWork: { icon: 'task', tile: 'task', title: 'Title', sub: ['ReferralID', 'DoneBy'], cols: ['WorkDate', 'Fee', 'Expenses'],
       essentials: ['ReferralID', 'Title', 'WorkDate', 'DoneBy', 'Fee', 'Expenses'] },
     ReferralPayments: { icon: 'wallet', sub: ['ReferralID', 'PaymentMethod'], cols: ['PaymentDate'],
-      essentials: ['ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod'] }
+      essentials: ['ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod'] },
+    Conversations: { icon: 'chat', tile: 'meet', title: 'ContactName', sub: ['Channel', 'LastMessagePreview'], cols: ['Status', 'LastMessageAt', 'UnreadCount'], status: 'Status' }
   };
+  var CHANNEL_ICONS = { WHATSAPP: 'whatsapp', MESSENGER: 'messenger', INSTAGRAM: 'instagram' };
   /** Fields that only make sense in some situations. */
   var adminJob = function (values) { return values.Scope === 'ADMIN_ONLY'; };
   var profitShare = function (values) { return values.Scope !== 'ADMIN_ONLY'; };
@@ -104,7 +111,7 @@
   var REQUIRED_IF = { 'Referrals.CaseID': profitShare, 'Referrals.Title': adminJob };
   function showIf(entity, name) { return SHOW_IF[entity + '.' + name] || SHOW_IF[name] || null; }
   var NAV = [
-    ['home'],
+    ['home', 'inbox'],
     ['Leads', 'Clients', 'Cases'],
     ['Referrals', 'ExternalPartners'],
     ['FollowUps', 'Consultations'],
@@ -235,6 +242,80 @@
     state.memoryToken = token || '';
     try { if (token) window.localStorage.setItem(TOKEN_KEY, token); else window.localStorage.removeItem(TOKEN_KEY); } catch (e) { /* storage blocked: keep it in memory */ }
   }
+
+  // ------------------------------------------------------------ Live updates
+  // Every few seconds the browser asks which sheets changed (a cache-only call on the server).
+  // If the screen shows any of them, it reloads its data quietly. It never interrupts typing,
+  // an open form, an open menu, or selected text; it waits until the person is done.
+  var SYNC = { versions: null, timer: null, failures: 0, pending: false, chats: '', stopped: true };
+  var HOME_DEPS = ['Leads', 'Clients', 'Cases', 'FollowUps', 'Consultations', 'Transactions', 'Referrals', 'ReferralPayments', 'Conversations'];
+  function viewDeps() {
+    var r = state.current || {};
+    if (r.view === 'home') return HOME_DEPS;
+    if (r.view === 'list') return [r.entity, 'Assignments'].concat(r.entity === 'Cases' || r.entity === 'Clients' ? ['Referrals'] : []);
+    if (r.view === 'detail') return state.detailDeps || [r.entity];
+    if (r.view === 'inbox') return ['Conversations', 'Messages'];
+    return [];
+  }
+  function userIsBusy() {
+    if (!$('modal-backdrop').hidden) return true;
+    if (document.querySelector('.menu:not([hidden])')) return true;
+    var active = document.activeElement;
+    var inbox = state.current && state.current.view === 'inbox';
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && $('content').contains(active) && !inbox) return true;
+    var selection = window.getSelection ? String(window.getSelection()) : '';
+    return selection.length > 0 && !inbox;
+  }
+  function liveRefresh() {
+    if (!state.boot || !state.current) return;
+    if (userIsBusy()) { SYNC.pending = true; return; }
+    SYNC.pending = false;
+    if (state.liveRefresh) state.liveRefresh(); else render();
+  }
+  function syncDelay() {
+    if (document.hidden) return null;
+    return document.hasFocus && !document.hasFocus() ? 15000 : 5000;
+  }
+  function scheduleSync(ms) {
+    clearTimeout(SYNC.timer);
+    if (SYNC.stopped) return;
+    var delay = ms === undefined ? syncDelay() : ms;
+    if (delay !== null) SYNC.timer = setTimeout(pollChanges, delay);
+  }
+  function pollChanges() {
+    if (!state.boot || SYNC.stopped) return;
+    if (SYNC.pending && !userIsBusy()) liveRefresh();
+    call('apiSyncState', SYNC.chats).then(function (result) {
+      SYNC.failures = 0;
+      if (!result || !result.versions) { SYNC.stopped = true; return; }
+      if (result.unread !== null && result.unread !== undefined && result.unread !== state.inboxUnread) { state.inboxUnread = result.unread; renderNav(); }
+      SYNC.chats = result.versions.Conversations || '';
+      var before = SYNC.versions;
+      SYNC.versions = result.versions;
+      if (!before) return;
+      var changed = Object.keys(result.versions).filter(function (sheet) { return before[sheet] !== result.versions[sheet]; });
+      if (!changed.length) return;
+      // Screens visited earlier show their remembered copy instantly, then fetch fresh data.
+      Object.keys(VIEW_CACHE).forEach(function (key) { VIEW_CACHE[key].at = 0; });
+      var deps = viewDeps();
+      if (changed.some(function (sheet) { return deps.indexOf(sheet) !== -1; })) liveRefresh();
+    }).catch(function (error) {
+      SYNC.failures += 1;
+      if (error && error.code === 'AUTH_REQUIRED') SYNC.stopped = true;
+    }).then(function () {
+      if (!SYNC.stopped) scheduleSync(SYNC.failures ? Math.min(60000, 5000 * Math.pow(2, SYNC.failures)) : undefined);
+    });
+  }
+  function startLiveSync() {
+    SYNC.stopped = false;
+    SYNC.versions = null;
+    SYNC.chats = '';
+    scheduleSync(1500);
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) clearTimeout(SYNC.timer); else scheduleSync(300); });
+  window.addEventListener('focus', function () { scheduleSync(300); });
+  document.addEventListener('focusout', function () { if (SYNC.pending) setTimeout(function () { if (SYNC.pending) liveRefresh(); }, 600); });
+  document.addEventListener('mouseup', function () { if (SYNC.pending) setTimeout(function () { if (SYNC.pending) liveRefresh(); }, 600); });
 
   // ------------------------------------------------------------ Instant screens
   // Screens you have seen show immediately from memory and refresh quietly;
@@ -482,6 +563,10 @@
   // ------------------------------------------------------------ Navigation
   function navigate(route, replace) {
     if (route.view === 'dashboard') route = { view: 'home' };
+    // A chat opens in the Inbox, not as a plain record page.
+    if (route.view === 'detail' && route.entity === 'Conversations') route = { view: 'inbox', id: route.id };
+    if (route.view === 'list' && route.entity === 'Conversations') route = { view: 'inbox' };
+    stopInboxPolling();
     if (state.current && !replace) state.stack.push(state.current);
     if (state.stack.length > 30) state.stack.shift();
     state.current = route;
@@ -492,12 +577,14 @@
   }
   function goBack() { state.current = state.stack.pop() || { view: 'home' }; render(); }
   function render() {
+    state.liveRefresh = null;
     renderNav();
     var route = state.current;
     if (route.view === 'list') return showList(route);
     if (route.view === 'detail') return showDetail(route);
     if (route.view === 'settings') return showSettings();
     if (route.view === 'security') return showSecurity();
+    if (route.view === 'inbox') return showInbox(route);
     return showHome();
   }
   function openDrawer() { $('sidebar').classList.add('open'); $('scrim').hidden = false; }
@@ -511,6 +598,7 @@
         if (item === 'home' || item === 'more') return true;
         if (item === 'settings') return can('Settings', 'read');
         if (item === 'security') return can('AccessLog', 'read');
+        if (item === 'inbox') return can('Conversations', 'read');
         return can(item, 'read');
       });
       var real = items.filter(function (item) { return item !== 'more'; });
@@ -518,14 +606,15 @@
       if (index > 0) nav.appendChild(h('div', { class: 'nav-gap' }));
       items.forEach(function (item) {
         if (item === 'more') { nav.appendChild(h('div', { class: 'nav-label', text: t('more') })); return; }
-        var active = (item === 'home' && route.view === 'home') || (item === 'settings' && route.view === 'settings') || (item === 'security' && route.view === 'security') ||
-          ((route.view === 'list' || route.view === 'detail') && route.entity === item);
-        var iconName = item === 'home' ? 'home' : item === 'settings' ? 'sliders' : item === 'security' ? 'shield' : ENTITY_UI[item].icon;
-        var label = item === 'home' ? t('navHome') : item === 'settings' ? t('navSettings') : item === 'security' ? t('navSecurity') : entityTitle(item);
+        var special = ['home', 'settings', 'security', 'inbox'].indexOf(item) !== -1;
+        var active = (special && route.view === item) || ((route.view === 'list' || route.view === 'detail') && route.entity === item);
+        var iconName = item === 'home' ? 'home' : item === 'settings' ? 'sliders' : item === 'security' ? 'shield' : item === 'inbox' ? 'chat' : ENTITY_UI[item].icon;
+        var label = item === 'home' ? t('navHome') : item === 'settings' ? t('navSettings') : item === 'security' ? t('navSecurity') : item === 'inbox' ? t('navInbox') : entityTitle(item);
+        var badge = item === 'inbox' && state.inboxUnread ? h('b', { class: 'nav-badge', text: state.inboxUnread > 99 ? '99+' : String(state.inboxUnread) }) : null;
         nav.appendChild(h('a', { class: active ? 'active' : '', title: label, onclick: function () {
           state.stack = [];
-          navigate(item === 'home' || item === 'settings' || item === 'security' ? { view: item } : { view: 'list', entity: item }, true);
-        } }, icon(iconName), h('span', { text: label })));
+          navigate(special ? { view: item } : { view: 'list', entity: item }, true);
+        } }, icon(iconName), h('span', { text: label }), badge));
       });
     });
   }
@@ -552,6 +641,8 @@
   /** Two calm steps: email, then the 6-digit code from that email. */
   function showSignIn() {
     if ($('signin')) return;
+    SYNC.stopped = true;
+    clearTimeout(SYNC.timer);
     closeModal();
     document.body.classList.add('signed-out');
     if (!state.boot) applyLanguage((navigator.language || '').toLowerCase().indexOf('ar') === 0 ? 'AR' : 'EN');
@@ -823,7 +914,8 @@
       drawFeed();
 
       var statCards = {};
-      var STAT_ICONS = { cases: ['briefcase', 'case'], tasks: ['task', 'task'], leads: ['inbox', 'lead'], consults: ['calendar', 'meet'], income: ['wallet', 'gold'], outstanding: ['wallet', 'gold'], referrals: ['external', 'gold'] };
+      if (s.inbox) { state.inboxUnread = s.inbox.unread; renderNav(); }
+      var STAT_ICONS = { inbox: ['chat', 'meet'], cases: ['briefcase', 'case'], tasks: ['task', 'task'], leads: ['inbox', 'lead'], consults: ['calendar', 'meet'], income: ['wallet', 'gold'], outstanding: ['wallet', 'gold'], referrals: ['external', 'gold'] };
       var makeStat = function (key, label, value, sub, alert, onclick, isMoney) {
         var look = STAT_ICONS[key] || ['sparkle', 'gold'];
         statCards[key] = h('div', { class: 'card stat', onclick: onclick },
@@ -831,6 +923,7 @@
           h('div', { class: 'stat-value' + (isMoney ? ' money' : ''), text: String(value) }),
           sub ? h('div', { class: 'stat-sub' + (alert ? ' is-alert' : ''), text: sub }) : null);
       };
+      if (s.inbox) makeStat('inbox', t('unreadMessages'), s.inbox.unread, s.inbox.unreadChats ? t('chatsWaitingN', { n: s.inbox.unreadChats }) : t('inboxClear'), s.inbox.unread > 0, function () { navigate({ view: 'inbox' }); });
       if (s.cases) makeStat('cases', t('openCases'), s.cases.open, t('assignedToYou', { n: s.cases.mine }), false, function () { navigate({ view: 'list', entity: 'Cases' }); });
       if (s.followUps) makeStat('tasks', t('openTasks'), s.followUps.open, s.followUps.overdue ? t('overdueN', { n: s.followUps.overdue }) : t('noneOverdue'), s.followUps.overdue > 0, function () { navigate({ view: 'list', entity: 'FollowUps', filters: { Status: 'OPEN' } }); });
       if (s.leads) makeStat('leads', t('openLeads'), s.leads.open, s.leads.unassigned ? t('unassignedN', { n: s.leads.unassigned }) : t('newThisMonth', { n: s.leads.newThisMonth }), !!s.leads.unassigned, function () { navigate({ view: 'list', entity: 'Leads' }); });
@@ -907,15 +1000,15 @@
       if (senior) {
         // Owners and partners: the firm at a glance first.
         // Two balanced rows: the work, then the money.
-        append(body, statsBlock(['cases', 'tasks', 'leads', 'consults'], true));
+        append(body, statsBlock(['inbox', 'cases', 'tasks', 'leads', 'consults'], true));
         append(body, statsBlock(['income', 'outstanding', 'referrals'], true));
         append(side, [quickActions(), pipelineCard()]);
       } else if (role === 'LAWYER') {
         // Lawyers: their own cases and deadlines.
-        append(side, [myCasesCard(), partnerJobsCard(), quickActions(), statsBlock(['tasks', 'consults'])]);
+        append(side, [myCasesCard(), partnerJobsCard(), quickActions(), statsBlock(['inbox', 'tasks', 'consults'])]);
       } else {
         // Assistants: intake, appointments, and payments.
-        append(side, [partnerJobsCard(), quickActions(), statsBlock(['consults', 'leads', 'income', 'tasks']), pipelineCard()]);
+        append(side, [partnerJobsCard(), quickActions(), statsBlock(['inbox', 'consults', 'leads', 'income', 'tasks']), pipelineCard()]);
       }
       body.appendChild(h('div', { class: 'home-grid' }, feedCard, side));
     }).catch(function (error) { clear(body).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
@@ -1066,13 +1159,17 @@
     root.appendChild(holder);
 
     function reset() { listState.offset = 0; listState.records = []; listState.labels = {}; listState.handling = {}; load(); }
+    var quiet = false;
+    // Live update: same search and filters, no loading placeholder.
+    state.liveRefresh = function () { quiet = true; reset(); };
     function load() {
       updateBulk();
-      if (!listState.records.length) clear(holder).appendChild(skeleton('rows'));
+      if (!listState.records.length && !quiet) clear(holder).appendChild(skeleton('rows'));
       call('apiListView', entity, {
         query: listState.query, filters: listState.filters, offset: listState.offset, limit: PAGE_SIZE,
         includeArchived: listState.includeArchived, sortBy: formMeta(entity).createdField, sortDirection: 'desc', handling: listState.handlingFilter
       }).then(function (result) {
+        quiet = false;
         listState.records = listState.records.concat(result.records);
         Object.assign(listState.labels, result.labels || {});
         Object.assign(listState.handling, result.handling || {});
@@ -1203,6 +1300,8 @@
     var ui = ENTITY_UI[entity];
     if (!VIEW_CACHE['detail:' + entity + ':' + route.id]) { content(); loading(); }
     fetchView('detail:' + entity + ':' + route.id, 'apiGetDetail', [entity, route.id], function (data) {
+      state.detailDeps = [entity, 'Assignments', 'Documents'].concat(Object.keys(data.related || {}))
+        .concat(entity === 'Cases' || entity === 'Clients' || entity === 'Consultations' ? ['Transactions', 'Referrals'] : []);
       var record = data.record;
       var labels = data.labels || {};
       var reload = function () { navigate({ view: 'detail', entity: entity, id: route.id, tab: state.current.tab }, true); };
@@ -1213,7 +1312,13 @@
       var actions = [];
       if (ui.contact && !blank(record.Phone)) {
         actions.push(h('a', { class: 'btn', href: 'tel:' + String(record.Phone).replace(/\s/g, '') }, icon('phone'), t('call')));
-        actions.push(h('a', { class: 'btn', href: waLink(record.Phone), target: '_blank', rel: 'noopener' }, icon('chat'), 'WhatsApp'));
+        if ((entity === 'Leads' || entity === 'Clients') && state.boot.channels && state.boot.channels.WHATSAPP && can('Conversations', 'read')) {
+          actions.push(h('button', { class: 'btn', type: 'button', onclick: function () {
+            call('apiStartWhatsApp', entity, recordId(entity, record)).then(function (chat) { navigate({ view: 'inbox', id: chat.ConversationID }); }).catch(function (error) { toast(errorMessage(error), true); });
+          } }, icon('whatsapp'), t('chatInCrm')));
+        } else {
+          actions.push(h('a', { class: 'btn', href: waLink(record.Phone), target: '_blank', rel: 'noopener' }, icon('chat'), 'WhatsApp'));
+        }
       }
       if (ui.contact && !blank(record.Email)) actions.push(h('a', { class: 'btn', href: 'mailto:' + record.Email }, icon('mail'), t('email')));
       if (entity === 'Documents') actions.push(h('button', { class: 'btn primary', type: 'button', onclick: function () { downloadDocument(record); } }, icon('download'), t('download')));
@@ -1354,7 +1459,10 @@
     var first = $('modal-body').querySelector('input:not([type=checkbox]):not([type=file]):not([readonly]), select, textarea');
     if (first) setTimeout(function () { first.focus(); }, 30);
   }
-  function closeModal() { $('modal-backdrop').hidden = true; clear($('modal-body')); clear($('modal-footer')); }
+  function closeModal() {
+    $('modal-backdrop').hidden = true; clear($('modal-body')); clear($('modal-footer'));
+    if (SYNC.pending) setTimeout(liveRefresh, 250);
+  }
 
   function confirmDialog(title, message, confirmLabel, onConfirm) {
     var button = h('button', { class: 'btn primary', type: 'button', text: confirmLabel });
@@ -1821,6 +1929,326 @@
   }
 
   // ------------------------------------------------------------ Settings
+  // ------------------------------------------------------------ Inbox (WhatsApp, Messenger, Instagram)
+  var inboxTimer = null;
+  var inboxFilter = { status: 'OPEN', channel: '', query: '' };
+  function stopInboxPolling() { if (inboxTimer) { clearInterval(inboxTimer); inboxTimer = null; } }
+  function channelBadge(channel, size) {
+    return h('span', { class: 'channel-badge ' + String(channel || '').toLowerCase() + (size ? ' ' + size : ''), title: enumLabel(channel) }, icon(CHANNEL_ICONS[channel] || 'chat'));
+  }
+  function chatTime(iso) {
+    if (!iso) return '';
+    var day = String(iso).slice(0, 10);
+    return day === state.today ? timeOf(iso) || friendlyDate(iso) : friendlyDate(iso);
+  }
+  function tickFor(message) {
+    if (message.Direction !== 'OUT') return null;
+    var map = { SENT: ['✓', 'sent'], DELIVERED: ['✓✓', 'delivered'], READ: ['✓✓', 'read'], FAILED: ['!', 'failed'] };
+    var tick = map[message.Status] || map.SENT;
+    return h('span', { class: 'tick ' + tick[1], title: enumLabel(message.Status) + (message.Error ? ': ' + message.Error : ''), text: tick[0] });
+  }
+
+  function showInbox(route) {
+    var root = content();
+    var layout = h('div', { class: 'inbox' + (route.id ? ' has-thread' : '') });
+    var listCol = h('section', { class: 'inbox-list card' });
+    var threadCol = h('section', { class: 'inbox-thread card' });
+    layout.appendChild(listCol);
+    layout.appendChild(threadCol);
+    root.appendChild(layout);
+
+    // List: filters, search, conversations.
+    var search = h('input', { class: 'input', type: 'search', placeholder: t('searchChats'), value: inboxFilter.query, dir: 'auto' });
+    var statusSeg = h('div', { class: 'segmented' });
+    [['OPEN', t('chatsOpen')], ['UNREAD', t('chatsUnread')], ['MINE', t('chatsMine')], ['CLOSED', t('chatsClosed')]].forEach(function (pair) {
+      statusSeg.appendChild(h('button', { type: 'button', class: inboxFilter.status === pair[0] ? 'on' : '', text: pair[1], onclick: function () { inboxFilter.status = pair[0]; showInbox(state.current); } }));
+    });
+    var channelRow = h('div', { class: 'channel-filter' });
+    [''].concat(['WHATSAPP', 'MESSENGER', 'INSTAGRAM']).forEach(function (channel) {
+      channelRow.appendChild(h('button', { type: 'button', class: 'chip-btn' + (inboxFilter.channel === channel ? ' on' : ''), title: channel ? enumLabel(channel) : t('allChannels'), onclick: function () { inboxFilter.channel = channel; showInbox(state.current); } },
+        channel ? icon(CHANNEL_ICONS[channel]) : null, channel ? null : t('allChannels')));
+    });
+    var listBody = h('div', { class: 'chat-list' }, skeleton('rows'));
+    append(listCol, [h('div', { class: 'inbox-head' }, h('h1', { class: 'page-title', text: t('navInbox') }), statusSeg), h('div', { class: 'inbox-tools' }, search, channelRow), listBody]);
+    var searchTimer = null;
+    search.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { inboxFilter.query = search.value.trim(); loadList(); }, 250); });
+
+    function listOptions() {
+      var o = { query: inboxFilter.query, channel: inboxFilter.channel || '' };
+      if (inboxFilter.status === 'OPEN' || inboxFilter.status === 'CLOSED') o.status = inboxFilter.status;
+      if (inboxFilter.status === 'UNREAD') o.unread = true;
+      if (inboxFilter.status === 'MINE') o.mine = true;
+      return o;
+    }
+    function loadList() {
+      return call('apiListConversations', listOptions()).then(function (data) {
+        state.inboxUnread = data.unread;
+        renderNav();
+        clear(listBody);
+        if (!data.records.length) {
+          listBody.appendChild(emptyState('chat', t('noChatsTitle'), data.connected && (data.connected.WHATSAPP || data.connected.MESSENGER) ? t('noChatsText') : t('noChannelsText')));
+          return;
+        }
+        data.records.forEach(function (chat) {
+          var unread = Number(chat.UnreadCount || 0);
+          var linked = (data.labels || {})[chat.LeadID] || (data.labels || {})[chat.ClientID] || '';
+          listBody.appendChild(h('button', { type: 'button', class: 'chat-item' + (chat.ConversationID === state.current.id ? ' on' : '') + (unread ? ' unread' : ''), onclick: function () { navigate({ view: 'inbox', id: chat.ConversationID }, true); } },
+            h('span', { class: 'chat-avatar' }, avatar(chat.ContactName || chat.ContactHandle || '?'), channelBadge(chat.Channel, 'mini')),
+            h('span', { class: 'chat-main' },
+              h('span', { class: 'chat-top' }, h('span', { class: 'chat-name', dir: 'auto', text: chat.ContactName || chat.ContactHandle || t('unknownContact') }), h('span', { class: 'chat-time', text: chatTime(chat.LastMessageAt || chat.CreatedAt) })),
+              h('span', { class: 'chat-bottom' }, h('span', { class: 'chat-preview', dir: 'auto', text: chat.LastMessagePreview || linked || chat.ContactHandle || '' }), unread ? h('b', { class: 'unread-badge', text: String(unread) }) : null))));
+        });
+      }).catch(function (error) { clear(listBody).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+    }
+
+    // Thread: header, messages, composer.
+    var messagesBox = h('div', { class: 'chat-messages', 'aria-live': 'polite' });
+    var composerBox = h('div', { class: 'chat-composer' });
+    var headBox = h('div', { class: 'chat-head' });
+    var lastSignature = '';
+    function drawMessages(data, force) {
+      var signature = data.messages.map(function (m) { return m.MessageID + m.Status; }).join('|');
+      if (!force && signature === lastSignature) return;
+      lastSignature = signature;
+      var atBottom = messagesBox.scrollHeight - messagesBox.scrollTop - messagesBox.clientHeight < 80;
+      clear(messagesBox);
+      var lastDay = '';
+      data.messages.forEach(function (m) {
+        var day = String(m.SentAt).slice(0, 10);
+        if (day !== lastDay) { lastDay = day; messagesBox.appendChild(h('div', { class: 'day-sep' }, h('span', { text: friendlyDate(m.SentAt) }))); }
+        var kindTag = { AUTO_REPLY: t('kindAutoReply'), TEMPLATE: t('kindTemplate'), COMMENT: t('kindComment'), LEAD_FORM: t('kindLeadForm'), NOTE: t('kindNote') }[m.Kind];
+        var who = m.Direction === 'OUT' ? (m.SentBy ? (data.labels[m.SentBy] || userName(m.SentBy)) : (m.Kind === 'AUTO_REPLY' || m.Kind === 'TEMPLATE' ? t('automatic') : t('fromMetaInbox'))) : '';
+        messagesBox.appendChild(h('div', { class: 'bubble-row ' + (m.Direction === 'OUT' ? 'out' : 'in') },
+          h('div', { class: 'bubble' + (m.Status === 'FAILED' ? ' failed' : '') + (m.Kind === 'COMMENT' ? ' comment' : '') },
+            kindTag ? h('span', { class: 'bubble-tag', text: kindTag }) : null,
+            h('div', { class: 'bubble-text', dir: 'auto', text: m.Body }),
+            m.Status === 'FAILED' && m.Error ? h('div', { class: 'bubble-error', dir: 'auto', text: m.Error }) : null,
+            h('div', { class: 'bubble-meta' }, who ? h('span', { dir: 'auto', text: who }) : null, h('span', { text: timeOf(m.SentAt) || friendlyDate(m.SentAt, true) }), tickFor(m)))));
+      });
+      if (atBottom || force) messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+    function drawHead(data) {
+      var c = data.conversation;
+      clear(headBox);
+      var linkLabel = data.labels[c.LeadID] || data.labels[c.ClientID] || '';
+      var link = c.ClientID ? detailLink('Clients', c.ClientID, linkLabel || t('client'), 'chat-link') : c.LeadID ? detailLink('Leads', c.LeadID, linkLabel || t('lead'), 'chat-link') : null;
+      var tools = [];
+      if (data.canManage) {
+        var users = state.boot.users || [];
+        var assign = h('select', { class: 'input compact', title: t('assignChat') }, h('option', { value: '', text: t('nobody') }),
+          users.map(function (u) { return h('option', { value: u.UserID, text: u.FullName, selected: u.UserID === c.AssignedTo }); }));
+        assign.addEventListener('change', function () { call('apiUpdateConversation', c.ConversationID, { AssignedTo: assign.value }).then(function () { toast(t('chatAssigned')); loadList(); }).catch(function (error) { toast(errorMessage(error), true); }); });
+        tools.push(assign);
+      }
+      tools.push(h('button', { class: 'btn small', type: 'button', onclick: function () {
+        call('apiUpdateConversation', c.ConversationID, { Status: c.Status === 'OPEN' ? 'CLOSED' : 'OPEN' }).then(function () { toast(c.Status === 'OPEN' ? t('chatClosed') : t('chatReopened')); showInbox(state.current); }).catch(function (error) { toast(errorMessage(error), true); });
+      } }, icon(c.Status === 'OPEN' ? 'check' : 'swap'), c.Status === 'OPEN' ? t('closeChat') : t('reopenChat')));
+      append(headBox, [
+        h('button', { class: 'icon-button chat-back', type: 'button', 'aria-label': t('back'), onclick: function () { navigate({ view: 'inbox' }, true); } }, icon('back', 'flip')),
+        h('span', { class: 'chat-avatar' }, avatar(c.ContactName || c.ContactHandle || '?', 'md'), channelBadge(c.Channel, 'mini')),
+        h('div', { class: 'chat-who' }, h('div', { class: 'chat-title', dir: 'auto', text: c.ContactName || c.ContactHandle || t('unknownContact') }),
+          h('div', { class: 'chat-sub' }, h('span', { dir: 'ltr', text: c.ContactHandle || '' }), link ? h('span', { class: 'dot-sep' }) : null, link)),
+        h('div', { class: 'chat-tools' }, tools)]);
+    }
+    function drawComposer(data) {
+      clear(composerBox);
+      var c = data.conversation;
+      var connected = data.connected[c.Channel];
+      if (!connected) { composerBox.appendChild(h('div', { class: 'alert warn', text: t('channelNotConnected') })); return; }
+      var w = data.window;
+      var templates = data.templates || [];
+      var useTemplate = c.Channel === 'WHATSAPP' && (!w.open || composerBox.dataset.mode === 'template') && templates.length;
+      if (!w.open && !useTemplate) {
+        composerBox.appendChild(h('div', { class: 'alert info', text: { USE_TEMPLATE: t('windowNeedsTemplate'), WINDOW_CLOSED: t('windowClosed'), COMMENT_REPLIED: t('commentReplied'), COMMENT_EXPIRED: t('commentExpired'), NO_COMMENT: t('windowClosed') }[w.reason] || t('windowClosed') }));
+        return;
+      }
+      if (useTemplate) {
+        if (!w.open) composerBox.appendChild(h('div', { class: 'composer-note', text: t('windowNeedsTemplate') }));
+        var pick = h('select', { class: 'input' }, templates.map(function (tpl) { return h('option', { value: tpl.name, text: tpl.label + ' (' + tpl.language + ')' }); }));
+        var fields = h('div', { class: 'template-fields' });
+        var drawFields = function () {
+          clear(fields);
+          var tpl = templates.filter(function (x) { return x.name === pick.value; })[0] || { params: 0 };
+          for (var i = 0; i < tpl.params; i += 1) fields.appendChild(h('input', { class: 'input', dir: 'auto', placeholder: t('templateValue', { n: i + 1 }), value: i === 0 ? (c.ContactName || '') : '' }));
+        };
+        pick.addEventListener('change', drawFields);
+        drawFields();
+        var sendTpl = h('button', { class: 'btn primary', type: 'button' }, icon('send', 'flip'), t('sendTemplate'));
+        sendTpl.addEventListener('click', function () {
+          var values = Array.prototype.map.call(fields.querySelectorAll('input'), function (input) { return input.value.trim(); });
+          sendTpl.disabled = true;
+          call('apiSendTemplate', c.ConversationID, pick.value, values).then(function () { composerBox.dataset.mode = ''; return refreshThread(true); })
+            .catch(function (error) { toast(errorMessage(error), true); }).then(function () { sendTpl.disabled = false; });
+        });
+        append(composerBox, [h('div', { class: 'template-row' }, pick, fields), h('div', { class: 'composer-actions' },
+          w.open ? h('button', { class: 'btn ghost small', type: 'button', text: t('writeMessage'), onclick: function () { composerBox.dataset.mode = ''; drawComposer(data); } }) : null, sendTpl)]);
+        return;
+      }
+      var box = h('textarea', { class: 'input composer-input', rows: 2, dir: 'auto', placeholder: t('typeReply') });
+      var send = h('button', { class: 'btn primary send-btn', type: 'button', title: t('send') }, icon('send', 'flip'), h('span', { text: t('send') }));
+      var doSend = function () {
+        var text = box.value.trim();
+        if (!text) return;
+        send.disabled = true;
+        call('apiSendMessage', c.ConversationID, text).then(function () { box.value = ''; return refreshThread(true); })
+          .catch(function (error) { toast(errorMessage(error), true); return refreshThread(true); }).then(function () { send.disabled = false; box.focus(); });
+      };
+      send.addEventListener('click', doSend);
+      box.addEventListener('keydown', function (event) { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); doSend(); } });
+      var row = h('div', { class: 'composer-row' }, box, send);
+      composerBox.appendChild(row);
+      var hints = [];
+      if (w.closesAt) hints.push(h('span', { text: t('windowOpenUntil', { d: friendlyDate(w.closesAt, true) }) }));
+      if (c.Channel === 'WHATSAPP' && templates.length) hints.push(h('button', { class: 'link-btn', type: 'button', text: t('useTemplate'), onclick: function () { composerBox.dataset.mode = 'template'; drawComposer(data); } }));
+      if (hints.length) composerBox.appendChild(h('div', { class: 'composer-hints' }, hints));
+    }
+    var current = null;
+    function refreshThread(force) {
+      if (!route.id) return Promise.resolve();
+      return call('apiGetConversation', route.id).then(function (data) {
+        var firstLoad = !current;
+        current = data;
+        drawHead(data);
+        drawMessages(data, force || firstLoad);
+        if (firstLoad || force) drawComposer(data);
+      });
+    }
+    if (route.id) {
+      append(threadCol, [headBox, messagesBox, composerBox]);
+      messagesBox.appendChild(skeleton('rows'));
+      refreshThread(true).then(loadList).catch(function (error) { clear(threadCol).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+    } else {
+      threadCol.appendChild(emptyState('chat', t('pickChat'), t('pickChatText')));
+      loadList();
+    }
+    // New messages appear as soon as the live check sees them, without disturbing the reply box.
+    state.liveRefresh = function () {
+      // The open chat first (that marks it read), then the list, so its unread badge is already gone.
+      if (route.id) refreshThread(false).catch(function () { /* next round */ }).then(loadList);
+      else loadList();
+    };
+  }
+
+  // ------------------------------------------------------------ Channels (owner settings)
+  function channelsCard() {
+    var card = h('div', { class: 'card channels-card', style: 'grid-column:1/-1' }, h('div', { class: 'card-title' }, icon('chat'), t('channelsTitle')), h('p', { class: 'muted', text: t('channelsNote') }));
+    var bodyBox = h('div', null, h('div', { class: 'loading', text: t('loading') }));
+    card.appendChild(bodyBox);
+    function draw(info) {
+      clear(bodyBox);
+      // 1. Connections
+      var conn = h('div', { class: 'channel-grid' });
+      var SECRET_FIELDS = [['WHATSAPP_PHONE_NUMBER_ID', 'whatsapp', 'secretWaPhoneId'], ['WHATSAPP_TOKEN', 'whatsapp', 'secretWaToken'], ['META_PAGE_ID', 'messenger', 'secretPageId'], ['META_PAGE_TOKEN', 'messenger', 'secretPageToken']];
+      SECRET_FIELDS.forEach(function (f) {
+        var st = info.secrets[f[0]] || {};
+        var input = h('input', { class: 'input', type: /TOKEN/.test(f[0]) ? 'password' : 'text', dir: 'ltr', autocomplete: 'off', placeholder: st.set ? t('secretSet', { x: st.hint }) : t('secretNotSet') });
+        var save = h('button', { class: 'btn small', type: 'button', text: t('save'), onclick: function () {
+          if (!input.value.trim()) return;
+          save.disabled = true;
+          call('apiSetChannelSecret', f[0], input.value.trim()).then(function (next) { toast(t('settingSaved')); draw(next); }).catch(function (error) { save.disabled = false; toast(errorMessage(error), true); });
+        } });
+        conn.appendChild(h('div', { class: 'form-field' }, h('label', null, icon(f[1]), t(f[2]), st.set ? h('span', { class: 'pill ok-pill', text: t('connectedShort') }) : null), h('div', { class: 'team-add', style: 'margin:0' }, input, save)));
+      });
+      var testRow = h('div', { class: 'button-row' });
+      [['WHATSAPP', 'whatsapp', 'testWhatsApp', info.connected.WHATSAPP], ['PAGE', 'messenger', 'testPage', info.connected.MESSENGER]].forEach(function (x) {
+        if (!x[3]) return;
+        var b = h('button', { class: 'btn small ghost', type: 'button' }, icon(x[1]), t(x[2]));
+        b.addEventListener('click', function () { b.disabled = true; call('apiTestChannel', x[0]).then(function (r) { toast(t('testOk', { x: r.name })); }).catch(function (error) { toast(errorMessage(error), true); }).then(function () { b.disabled = false; }); });
+        testRow.appendChild(b);
+      });
+      append(bodyBox, [h('div', { class: 'fact-label', text: t('connections') }), conn, testRow]);
+
+      // 2. Relay link
+      var relayBox = h('div', { class: 'relay-box' });
+      if (info.relayUrl) {
+        var link = h('input', { class: 'input', readonly: true, dir: 'ltr', value: info.relayUrl, onclick: function () { link.select(); } });
+        relayBox.appendChild(link);
+      } else relayBox.appendChild(h('div', { class: 'muted', text: t('relayNone') }));
+      relayBox.appendChild(h('div', { class: 'button-row', style: 'margin-top:8px' },
+        info.relayUrl ? h('button', { class: 'btn small', type: 'button', text: t('copyLink'), onclick: function () { if (navigator.clipboard) navigator.clipboard.writeText(info.relayUrl).then(function () { toast(t('copied')); }); } }) : null,
+        h('button', { class: 'btn small ghost', type: 'button', text: info.relayUrl ? t('intakeNewKey') : t('relayCreate'), onclick: function () {
+          if (info.relayUrl && !window.confirm(t('relayNewConfirm'))) return;
+          call('apiRotateRelayKey').then(draw).catch(function (error) { toast(errorMessage(error), true); });
+        } }),
+        h('span', { class: 'faint', style: 'font-size:13px', text: info.lastEvent ? t('relayLast', { d: friendlyDate(info.lastEvent, true) }) : t('relayNever') })));
+      append(bodyBox, [h('div', { class: 'fact-label', style: 'margin-top:18px', text: t('relayTitle') }), h('p', { class: 'faint', style: 'margin:0 0 8px;font-size:13px', text: t('relayNote') }), relayBox]);
+
+      // 3. Automatic first reply
+      var cfg = JSON.parse(JSON.stringify(info.config));
+      var autoOn = h('input', { type: 'checkbox', checked: cfg.autoReply.enabled });
+      var chBoxes = {};
+      var chRow = h('div', { class: 'button-row' });
+      [['WHATSAPP', 'whatsapp'], ['MESSENGER', 'messenger'], ['INSTAGRAM', 'instagram'], ['COMMENTS', 'chat']].forEach(function (x) {
+        chBoxes[x[0]] = h('input', { type: 'checkbox', checked: !!cfg.autoReply.channels[x[0]] });
+        chRow.appendChild(h('label', { class: 'check-chip' }, chBoxes[x[0]], icon(x[1]), x[0] === 'COMMENTS' ? t('commentsPrivate') : enumLabel(x[0])));
+      });
+      var textAr = h('textarea', { class: 'input', dir: 'rtl', rows: 3 }); textAr.value = cfg.autoReply.textAr || '';
+      var textEn = h('textarea', { class: 'input', dir: 'ltr', rows: 3 }); textEn.value = cfg.autoReply.textEn || '';
+      var quiet = h('input', { class: 'input compact', type: 'number', min: '0', max: '90', value: String(cfg.autoReply.quietDays) });
+      // 4. WhatsApp templates and reminders
+      var tplList = h('div', { class: 'template-list' });
+      var templates = (cfg.templates || []).slice();
+      var reminderOn = h('input', { type: 'checkbox', checked: cfg.reminders.enabled });
+      var reminderPick = h('select', { class: 'input compact' });
+      function drawTemplates() {
+        clear(tplList);
+        templates.forEach(function (tpl, index) {
+          var name = h('input', { class: 'input', dir: 'ltr', placeholder: 'consultation_reminder', value: tpl.name || '' });
+          var lang = h('input', { class: 'input compact', dir: 'ltr', placeholder: 'ar', value: tpl.language || 'ar' });
+          var label = h('input', { class: 'input', dir: 'auto', placeholder: t('templateLabel'), value: tpl.label || '' });
+          var params = h('input', { class: 'input compact', type: 'number', min: '0', max: '10', value: String(tpl.params || 0), title: t('templateParams') });
+          [name, lang, label, params].forEach(function (el) { el.addEventListener('input', function () { templates[index] = { name: name.value.trim(), language: lang.value.trim(), label: label.value.trim(), params: Number(params.value || 0) }; drawReminderPick(); }); });
+          tplList.appendChild(h('div', { class: 'template-edit' }, name, lang, label, params,
+            h('button', { class: 'icon-button', type: 'button', title: t('remove'), onclick: function () { templates.splice(index, 1); drawTemplates(); } }, icon('x'))));
+        });
+        tplList.appendChild(h('button', { class: 'btn small ghost', type: 'button', onclick: function () { templates.push({ name: '', language: 'ar', label: '', params: 0 }); drawTemplates(); } }, icon('plus'), t('addTemplate')));
+        drawReminderPick();
+      }
+      function drawReminderPick() {
+        var chosen = reminderPick.value || cfg.reminders.template;
+        clear(reminderPick).appendChild(h('option', { value: '', text: t('choose') }));
+        templates.forEach(function (tpl) { if (tpl.name) reminderPick.appendChild(h('option', { value: tpl.name, text: tpl.label || tpl.name, selected: tpl.name === chosen })); });
+      }
+      drawTemplates();
+      var saveAll = h('button', { class: 'btn primary', type: 'button', text: t('saveChannels') });
+      saveAll.addEventListener('click', function () {
+        var next = {
+          autoReply: { enabled: autoOn.checked, channels: {}, quietDays: Number(quiet.value || 0), textAr: textAr.value.trim(), textEn: textEn.value.trim() },
+          reminders: { enabled: reminderOn.checked, template: reminderPick.value, language: 'ar' },
+          templates: templates.filter(function (tpl) { return tpl.name; })
+        };
+        Object.keys(chBoxes).forEach(function (k) { next.autoReply.channels[k] = chBoxes[k].checked; });
+        saveAll.disabled = true;
+        call('apiSaveChannelSettings', next).then(function (r) { toast(t('settingSaved')); draw(r); }).catch(function (error) { saveAll.disabled = false; toast(errorMessage(error), true); });
+      });
+      append(bodyBox, [
+        h('div', { class: 'fact-label', style: 'margin-top:18px', text: t('autoReplyTitle') }),
+        h('label', { class: 'switch' }, autoOn, h('span', { text: t('autoReplyOn') })), chRow,
+        h('div', { class: 'form-grid', style: 'margin-top:10px' },
+          h('div', { class: 'form-field' }, h('label', { text: t('autoReplyAr') }), textAr),
+          h('div', { class: 'form-field' }, h('label', { text: t('autoReplyEn') }), textEn)),
+        h('div', { class: 'form-field', style: 'max-width:340px' }, h('label', { text: t('quietDays') }), quiet),
+        h('div', { class: 'fact-label', style: 'margin-top:18px', text: t('templatesTitle') }),
+        h('p', { class: 'faint', style: 'margin:0 0 8px;font-size:13px', text: t('templatesNote') }), tplList,
+        h('label', { class: 'switch', style: 'margin-top:12px' }, reminderOn, h('span', { text: t('remindersWhatsApp') })),
+        h('div', { class: 'form-field', style: 'max-width:340px' }, h('label', { text: t('reminderTemplate') }), reminderPick),
+        h('div', { class: 'button-row', style: 'margin-top:14px' }, saveAll)]);
+
+      // 5. Recent deliveries
+      if (info.events && info.events.length) {
+        var list = h('div', { class: 'event-list' });
+        info.events.forEach(function (e) {
+          list.appendChild(h('div', { class: 'event-row' }, h('span', { class: 'pill ' + (e.ProcessingStatus === 'FAILED' ? 'danger-pill' : e.ProcessingStatus === 'PROCESSED' ? 'ok-pill' : ''), text: enumLabel(e.ProcessingStatus) }),
+            h('span', { text: enumLabel(e.Channel) + ' · ' + e.EventType }), h('span', { class: 'faint', dir: 'auto', text: e.Detail }), h('span', { class: 'faint', text: friendlyDate(e.ReceivedAt, true) }),
+            e.ProcessingStatus === 'FAILED' && e.EventType === 'LEADGEN' ? h('button', { class: 'btn small', type: 'button', text: t('retry'), onclick: function () { call('apiRetryWebhookEvent', e.WebhookEventID).then(function (r) { toast(t('settingSaved')); draw(r); }).catch(function (error) { toast(errorMessage(error), true); }); } }) : null));
+        });
+        append(bodyBox, [h('div', { class: 'fact-label', style: 'margin-top:18px', text: t('recentDeliveries') }), list]);
+      }
+    }
+    call('apiGetChannelSettings').then(draw).catch(function (error) { clear(bodyBox).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
+    return card;
+  }
+
   function showSettings() {
     var root = content();
     root.appendChild(pageHead(t('navSettings'), t('settingsSub')));
@@ -1922,6 +2350,7 @@
       call('apiGetIntakeStatus').then(drawIntake).catch(function (error) { intakeState.textContent = errorMessage(error); });
       grid.appendChild(intakeCard);
     }
+    if (can('Channels', 'update')) grid.appendChild(channelsCard());
 
     var firmHolder = h('div', { class: 'card', style: 'grid-column:1/-1' }, h('div', { class: 'loading', text: t('loading') }));
     grid.appendChild(firmHolder);
@@ -2037,6 +2466,7 @@
     if (start && start.form) openForm({ entity: start.form, record: start.record || null, labels: {} });
     if (start && start.convert) openConvert(start.convert);
     if (start && start.upload) openUpload({});
+    startLiveSync();
   }).catch(function (error) {
     if (error && error.code === 'AUTH_REQUIRED') return;
     content();

@@ -26,7 +26,8 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.FullName = mpRequiredText_(record.FullName, 'FullName', 200);
       record.Email = mpValidateEmail_(record.Email, 'Email', false);
       record.Phone = mpValidatePhone_(record.Phone, false);
-      if (!record.Email && !record.Phone) throw new Error('A lead needs a phone number or email address.');
+      record.SocialProfile = mpIsBlank_(record.SocialProfile) ? '' : mpRequiredText_(record.SocialProfile, 'SocialProfile', 200);
+      if (!record.Email && !record.Phone && !record.SocialProfile) throw new Error('A lead needs a phone number, email address, or social profile.');
       record.ClientType = mpAssertEnum_(record.ClientType || 'INDIVIDUAL', MP_CONFIG.CLIENT_TYPES, 'ClientType', true);
       record.Source = mpAssertEnum_(record.Source, MP_CONFIG.LEAD_SOURCES, 'Source', true);
       record.Priority = mpAssertEnum_(record.Priority || 'MEDIUM', MP_CONFIG.PRIORITIES, 'Priority', true);

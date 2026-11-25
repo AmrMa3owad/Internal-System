@@ -58,6 +58,13 @@ const MP_CONFIG = Object.freeze({
   BACKUP_KEEP: 30,
   BACKUP_HOUR: 2,
   INTAKE_KEY_PROPERTY: 'MP_INTAKE_KEY',
+  // Messaging channels (see Channels.gs and relay/). Conversations are per person per channel.
+  CHANNELS: ['WHATSAPP', 'MESSENGER', 'INSTAGRAM'],
+  CONVERSATION_STATUSES: ['OPEN', 'CLOSED'],
+  MESSAGE_DIRECTIONS: ['IN', 'OUT'],
+  MESSAGE_KINDS: ['TEXT', 'MEDIA', 'COMMENT', 'LEAD_FORM', 'AUTO_REPLY', 'TEMPLATE', 'NOTE'],
+  MESSAGE_STATUSES: ['RECEIVED', 'SENT', 'DELIVERED', 'READ', 'FAILED'],
+  WEBHOOK_STATUSES: ['PROCESSED', 'IGNORED', 'FAILED'],
   ADMIN_ROLES: ['OWNER'],
   // Roles that only see records assigned to them (see Access.gs).
   RECORD_RESTRICTED_ROLES: ['LAWYER', 'ASSISTANT'],
@@ -67,7 +74,8 @@ const MP_CONFIG = Object.freeze({
     Users: 'USR', Leads: 'LED', Clients: 'CLT', Companies: 'CMP', Cases: 'CAS',
     Consultations: 'CON', Transactions: 'TRX', FollowUps: 'FLW', Activities: 'ACT',
     Documents: 'DOC', Assignments: 'ASG', AccessLog: 'LOG',
-    ExternalPartners: 'PTN', Referrals: 'REF', ReferralWork: 'RWK', ReferralPayments: 'RPY'
+    ExternalPartners: 'PTN', Referrals: 'REF', ReferralWork: 'RWK', ReferralPayments: 'RPY',
+    Conversations: 'CNV', Messages: 'MSG', WebhookEvents: 'WHE'
   }
 });
 
@@ -89,13 +97,17 @@ const MP_SYSTEM_MANAGED_FIELDS = Object.freeze({
   Referrals: ['ReferralID', 'ClientID', 'AcceptedAt', 'AcceptedBy', 'ExpectedShare', 'AdminFeesTotal', 'ExpensesTotal', 'TotalDue', 'TotalReceived', 'Balance', 'CreatedBy', 'CreatedAt', 'UpdatedAt', 'ClosedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   ReferralWork: ['WorkID', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   ReferralPayments: ['PaymentID', 'RecordedBy', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  Conversations: ['ConversationID', 'Channel', 'ExternalThreadID', 'ContactName', 'ContactHandle', 'LastMessageAt', 'LastInboundAt', 'LastMessagePreview', 'UnreadCount', 'CreatedAt', 'UpdatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  Messages: ['MessageID', 'ConversationID', 'ExternalMessageID', 'Direction', 'Kind', 'Body', 'SentBy', 'SentAt', 'Status', 'Error', 'CreatedAt'],
+  WebhookEvents: ['WebhookEventID', 'Channel', 'ExternalEventID', 'EventType', 'ReceivedAt', 'ProcessingStatus', 'Detail'],
   Settings: ['SettingKey', 'UpdatedAt', 'UpdatedBy', 'Version']
 });
 
 /** Requested business fields are retained; operational metadata is appended. */
 const MP_SCHEMAS = Object.freeze({
   Users: ['UserID', 'FullName', 'Email', 'Role', 'Status', 'Language', 'CreatedAt', 'LastLogin', 'IsArchived', 'ArchivedAt', 'Version'],
-  Leads: ['LeadID', 'FullName', 'Phone', 'Email', 'ClientType', 'CompanyID', 'Source', 'CampaignID', 'PracticeArea', 'InquiryType', 'Description', 'Priority', 'Status', 'AssignedTo', 'CreatedAt', 'UpdatedAt', 'LastContactAt', 'NextFollowUpAt', 'LostReason', 'ConvertedClientID', 'IsArchived', 'ArchivedAt', 'Version'],
+  // SocialProfile: how to reach someone who wrote on Messenger/Instagram/TikTok without a phone or email.
+  Leads: ['LeadID', 'FullName', 'Phone', 'Email', 'SocialProfile', 'ClientType', 'CompanyID', 'Source', 'CampaignID', 'PracticeArea', 'InquiryType', 'Description', 'Priority', 'Status', 'AssignedTo', 'CreatedAt', 'UpdatedAt', 'LastContactAt', 'NextFollowUpAt', 'LostReason', 'ConvertedClientID', 'IsArchived', 'ArchivedAt', 'Version'],
   Clients: ['ClientID', 'ClientType', 'FullName', 'CompanyID', 'Phone', 'Email', 'Address', 'Nationality', 'Notes', 'AssignedTo', 'CreatedAt', 'CreatedFromLeadID', 'Status', 'IsArchived', 'ArchivedAt', 'Version'],
   Companies: ['CompanyID', 'CompanyName', 'CommercialRegistrationNumber', 'TaxNumber', 'ContactPerson', 'Phone', 'Email', 'Address', 'Notes', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   // OpposingParties is an intentional Stage 1 extension for conflict checks.
@@ -119,7 +131,13 @@ const MP_SCHEMAS = Object.freeze({
   // Work our team does for the partner; each task has its agreed fee plus expenses we paid that the partner reimburses.
   ReferralWork: ['WorkID', 'ReferralID', 'Title', 'WorkDate', 'Fee', 'Expenses', 'DoneBy', 'Notes', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
   // Money received from a partner for a referral.
-  ReferralPayments: ['PaymentID', 'ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod', 'Description', 'RecordedBy', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version']
+  ReferralPayments: ['PaymentID', 'ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod', 'Description', 'RecordedBy', 'CreatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  // One chat per person per channel (WhatsApp number, Messenger PSID, Instagram ID), linked to a lead or client.
+  Conversations: ['ConversationID', 'Channel', 'ExternalThreadID', 'ContactName', 'ContactHandle', 'LeadID', 'ClientID', 'AssignedTo', 'Status', 'LastMessageAt', 'LastInboundAt', 'LastMessagePreview', 'UnreadCount', 'CreatedAt', 'UpdatedAt', 'IsArchived', 'ArchivedAt', 'Version'],
+  // Every message in and out, including auto-replies, templates, comments, and lead-form answers.
+  Messages: ['MessageID', 'ConversationID', 'ExternalMessageID', 'Direction', 'Kind', 'Body', 'SentBy', 'SentAt', 'Status', 'Error', 'CreatedAt'],
+  // What the relay delivered and what happened to it (owners see it on the Channels settings card).
+  WebhookEvents: ['WebhookEventID', 'Channel', 'ExternalEventID', 'EventType', 'ReceivedAt', 'ProcessingStatus', 'Detail']
 });
 
 const MP_DEFAULT_SETTINGS = Object.freeze({
@@ -167,7 +185,13 @@ const MP_PERMISSIONS = Object.freeze({
   ExternalPartners: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, update: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ },
   Referrals: { read: MP_ALL_ROLES_, create: MP_SENIOR_ROLES_, update: MP_SENIOR_ROLES_, archive: MP_SENIOR_ROLES_ },
   ReferralWork: { read: MP_ALL_ROLES_, create: MP_ALL_ROLES_, update: MP_ALL_ROLES_, archive: MP_SENIOR_ROLES_ },
-  ReferralPayments: { read: MP_FINANCE_ROLES_, create: MP_FINANCE_ROLES_, update: MP_FINANCE_ROLES_, archive: MP_SENIOR_ROLES_ }
+  ReferralPayments: { read: MP_FINANCE_ROLES_, create: MP_FINANCE_ROLES_, update: MP_FINANCE_ROLES_, archive: MP_SENIOR_ROLES_ },
+  // Chats: everyone reads and replies within their record scope; seniors reassign and close for others.
+  Conversations: { read: MP_ALL_ROLES_, update: MP_ALL_ROLES_ },
+  Messages: { read: MP_ALL_ROLES_, create: MP_ALL_ROLES_ },
+  WebhookEvents: { read: ['OWNER'] },
+  // Channel tokens, auto-replies, and WhatsApp templates.
+  Channels: { read: ['OWNER'], update: ['OWNER'] }
 });
 
 /** Foreign keys per entity (field -> target entity). Documents.EntityID is polymorphic via EntityType. */
@@ -181,7 +205,9 @@ const MP_REFERENCE_FIELDS = Object.freeze({
   Documents: { UploadedBy: 'Users' },
   Referrals: { PartnerID: 'ExternalPartners', CaseID: 'Cases', ClientID: 'Clients', AssignedTo: 'Users', AcceptedBy: 'Users', CreatedBy: 'Users' },
   ReferralWork: { ReferralID: 'Referrals', DoneBy: 'Users' },
-  ReferralPayments: { ReferralID: 'Referrals', RecordedBy: 'Users' }
+  ReferralPayments: { ReferralID: 'Referrals', RecordedBy: 'Users' },
+  Conversations: { LeadID: 'Leads', ClientID: 'Clients', AssignedTo: 'Users' },
+  Messages: { ConversationID: 'Conversations', SentBy: 'Users' }
 });
 
 /** Roles allowed to view a document of each confidentiality level. */
@@ -199,10 +225,7 @@ const MP_FINANCIAL_FIELDS = Object.freeze({
   ReferralWork: ['Fee']
 });
 
-/** Kept in code (not created yet) to reserve the Stage 1 integration contract. */
+/** Reserved for later integrations (not created). Conversations, Messages, and WebhookEvents are live. */
 const MP_FUTURE_SCHEMAS = Object.freeze({
-  ChannelAccounts: ['ChannelAccountID', 'Channel', 'DisplayName', 'Status', 'CreatedAt'],
-  Conversations: ['ConversationID', 'ChannelAccountID', 'ExternalConversationID', 'LeadID', 'ClientID', 'AssignedTo', 'Status', 'CreatedAt', 'UpdatedAt'],
-  Messages: ['MessageID', 'ConversationID', 'ExternalMessageID', 'Direction', 'Body', 'SentAt', 'Status'],
-  WebhookEvents: ['WebhookEventID', 'Channel', 'ExternalEventID', 'EventType', 'ReceivedAt', 'ProcessingStatus']
+  ChannelAccounts: ['ChannelAccountID', 'Channel', 'DisplayName', 'Status', 'CreatedAt']
 });

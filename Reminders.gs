@@ -128,7 +128,12 @@ function dailyReminderTrigger(event) {
   const uid = event && event.triggerUid;
   const genuine = !!uid && mpReminderTriggers_().some(function(trigger) { return trigger.getUniqueId() === uid; });
   if (!genuine) return mpFailure_(new Error('dailyReminderTrigger only runs from its scheduled trigger.'));
-  try { return mpSuccess_(mpSendDailyReminders_()); }
+  try {
+    const emails = mpSendDailyReminders_();
+    // Tomorrow's consultations get a WhatsApp template reminder when an owner turned that on.
+    try { emails.whatsapp = mpSendWhatsAppReminders_(); } catch (error) { console.warn('WhatsApp reminders failed: ' + error.message); }
+    return mpSuccess_(emails);
+  }
   catch (error) { console.error(error); return mpFailure_(error); }
 }
 

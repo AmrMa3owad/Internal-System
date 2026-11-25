@@ -106,6 +106,33 @@ const adminJob = insert('Referrals', { PartnerID: alex.PartnerID, Scope: 'ADMIN_
 insert('ReferralWork', { ReferralID: adminJob.ReferralID, Title: 'Submitted the incorporation papers', WorkDate: cairo(-4), Fee: 1500, Expenses: 350, DoneBy: lawyer.UserID }, ownerId);
 insert('ReferralWork', { ReferralID: adminJob.ReferralID, Title: 'Collected the commercial register extract', WorkDate: cairo(-1), Fee: 800, Expenses: 120, DoneBy: lawyer.UserID }, ownerId);
 
+// Messaging channels: connected (to the fake Graph API) with a few realistic chats.
+runtime.setActiveEmail(runtime.ownerEmail);
+[['WHATSAPP_TOKEN', 'EAAdemo-whatsapp-0001'], ['WHATSAPP_PHONE_NUMBER_ID', '1098765432'], ['META_PAGE_TOKEN', 'EAAdemo-page-0002'], ['META_PAGE_ID', '5550001']]
+  .forEach(([name, value]) => must(fn('apiSetChannelSecret')(name, value), 'secret ' + name));
+must(fn('apiSaveChannelSettings')({
+  autoReply: Object.assign({}, fn('mpChannelConfig_')().autoReply, { enabled: true }),
+  reminders: { enabled: true, template: 'consultation_reminder', language: 'ar' },
+  templates: [{ name: 'consultation_reminder', language: 'ar', label: 'Consultation reminder', params: 3 }, { name: 'payment_reminder', language: 'ar', label: 'Payment reminder', params: 2 }, { name: 'documents_request', language: 'ar', label: 'Documents request', params: 1 }]
+}), 'channel settings');
+must(fn('apiRotateRelayKey')(), 'relay key');
+runtime.graph.profiles['PSID-31'] = { first_name: 'Rania', last_name: 'Fouad' };
+runtime.graph.profiles['IGSID-52'] = { name: 'Youssef Adel', username: 'youssef.adel' };
+const minutesAgo = (m) => Math.floor(Date.now() / 1000) - m * 60;
+const wa = (from, name, id, text, ago) => ({ source: 'meta', body: { object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: { contacts: [{ wa_id: from, profile: { name } }], messages: [{ from, id, timestamp: String(minutesAgo(ago)), type: 'text', text: { body: text } }] } }] }] } });
+fn('mpProcessRelay_')(wa('201001112222', 'Mostafa Ali', 'wamid.d1', 'السلام عليكم، عندي مشكلة في عقد إيجار المحل وعايز أعرف حقوقي', 95));
+fn('mpProcessRelay_')(wa('201001112222', 'Mostafa Ali', 'wamid.d2', 'المالك عايز يطلعني قبل نهاية العقد', 93));
+fn('mpProcessRelay_')(wa('201001110010', 'Mona Saleh', 'wamid.d3', 'Hi, can we move tomorrow’s consultation to 1 pm?', 12));
+fn('mpProcessRelay_')({ source: 'meta', body: { object: 'page', entry: [{ id: '5550001', messaging: [{ sender: { id: 'PSID-31' }, recipient: { id: '5550001' }, timestamp: Date.now() - 40 * 60000, message: { mid: 'm_d4', text: 'Hello, I need advice about custody after divorce. Do you offer online consultations?' } }] }] } });
+fn('mpProcessRelay_')({ source: 'meta', body: { object: 'instagram', entry: [{ id: 'IG', messaging: [{ sender: { id: 'IGSID-52' }, recipient: { id: 'IG' }, timestamp: Date.now() - 5 * 60000, message: { mid: 'ig_d5', text: 'How much is a consultation for company formation?' } }] }] } });
+fn('mpProcessRelay_')({ source: 'meta', body: { object: 'page', entry: [{ id: '5550001', changes: [{ field: 'feed', value: { item: 'comment', verb: 'add', comment_id: 'C_d6', post_id: 'P_1', message: 'كم سعر الاستشارة؟', from: { id: 'U-7', name: 'Karim Said' }, created_time: minutesAgo(200) } }] }] } });
+// A reply from the lawyer, so the thread shows both sides.
+const mostafa = fn('mpRows_')('Conversations').records.find((c) => c.ExternalThreadID === '201001112222');
+must(fn('apiUpdateConversation')(mostafa.ConversationID, { AssignedTo: lawyer.UserID }), 'assign chat');
+runtime.setActiveEmail('lawyer@demo.test');
+must(fn('apiSendMessage')(mostafa.ConversationID, 'أهلًا أستاذ مصطفى، من فضلك ابعت صورة من العقد وآخر إيصال إيجار، وهنراجعهم النهارده.'), 'lawyer reply');
+runtime.setActiveEmail(runtime.ownerEmail);
+
 // 'guest' behaves like a personal Gmail visitor Google does not identify: the app shows the email-code sign-in.
 const IDENTITIES = { owner: runtime.ownerEmail, partner: 'partner@demo.test', lawyer: 'lawyer@demo.test', assistant: 'assistant@demo.test', guest: '' };
 const hasIdentity = (name) => Object.prototype.hasOwnProperty.call(IDENTITIES, name);
@@ -115,7 +142,7 @@ function escapeHtml(value) {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** ?screen=list:Cases | detail:Cases[:last|:Field=VALUE] | form:Cases | edit:Cases | convert | upload | settings  (first active record is used). */
+/** ?screen=list:Cases | inbox[:WHATSAPP] | detail:Cases[:last|:Field=VALUE] | form:Cases | edit:Cases | convert | upload | settings  (first active record is used). */
 function startScreen(screen, actor) {
   if (!screen) return null;
   const [kind, entity, which] = String(screen).split(':');
@@ -125,6 +152,11 @@ function startScreen(screen, actor) {
   if (kind === 'list') return { route: { view: 'list', entity } };
   if (kind === 'settings') return { route: { view: 'settings' } };
   if (kind === 'security') return { route: { view: 'security' } };
+  if (kind === 'inbox') {
+    const chats = fn('mpApiListConversations_')(actor, {}).records;
+    const chat = entity ? chats.find((c) => c.Channel === entity) : null;
+    return { route: { view: 'inbox', id: chat ? chat.ConversationID : undefined } };
+  }
   if (kind === 'detail') { const record = first(entity); return record ? { route: { view: 'detail', entity, id: record[fn('MP_SCHEMAS')[entity][0]] } } : { route: { view: 'list', entity } }; }
   if (kind === 'form') return { route: { view: 'list', entity }, form: entity };
   if (kind === 'edit') return { route: { view: 'list', entity }, form: entity, record: first(entity) };

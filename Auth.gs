@@ -348,7 +348,12 @@ function mpRpcHandlers_() {
     apiPreviewMyReminder: apiPreviewMyReminder, apiSignOut: apiSignOut, apiStart: apiStart,
     apiListAccessLog: apiListAccessLog, apiClearSignInLimit: apiClearSignInLimit, apiListSessions: apiListSessions, apiRevokeSession: apiRevokeSession,
     apiGetBackupStatus: apiGetBackupStatus, apiSetDailyBackups: apiSetDailyBackups, apiBackupNow: apiBackupNow,
-    apiGetIntakeStatus: apiGetIntakeStatus, apiSetLeadIntake: apiSetLeadIntake
+    apiGetIntakeStatus: apiGetIntakeStatus, apiSetLeadIntake: apiSetLeadIntake,
+    apiListConversations: apiListConversations, apiGetConversation: apiGetConversation, apiSendMessage: apiSendMessage, apiSendTemplate: apiSendTemplate,
+    apiUpdateConversation: apiUpdateConversation, apiStartWhatsApp: apiStartWhatsApp,
+    apiGetChannelSettings: apiGetChannelSettings, apiSaveChannelSettings: apiSaveChannelSettings, apiSetChannelSecret: apiSetChannelSecret,
+    apiRotateRelayKey: apiRotateRelayKey, apiTestChannel: apiTestChannel, apiRetryWebhookEvent: apiRetryWebhookEvent,
+    apiSyncState: apiSyncState
   };
 }
 

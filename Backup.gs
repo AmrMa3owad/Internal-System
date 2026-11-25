@@ -90,6 +90,7 @@ function restoreFromBackup(spreadsheetId) {
     const previous = PropertiesService.getScriptProperties().getProperty(MP_CONFIG.DATABASE_ID_PROPERTY);
     const report = mpBindExistingDatabase_(spreadsheetId);
     Object.keys(MP_SCHEMAS).forEach(function(name) { mpInvalidateRows_(name); });
+    try { mpInstallChangeTrigger_(); } catch (error) { console.warn('Hand-edit trigger not moved: ' + error.message); }
     console.log('Restored. The app now uses backup ' + spreadsheetId + '. The previous database (' + previous + ') was not changed.');
     return mpSuccess_({ restored: spreadsheetId, previous: previous, report: report });
   } catch (error) { console.error(error); return mpFailure_(error); }

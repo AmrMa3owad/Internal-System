@@ -154,6 +154,19 @@ function mpNotifyNewLead_(lead) {
 
 /** Public web endpoint for lead intake. Everything else in the app goes through doGet/apiCall. */
 function doPost(event) {
+  // Messaging relay (relay/worker.js): it has already checked Meta's / TikTok's signature.
+  if (event && event.parameter && event.parameter.relay !== undefined) {
+    try {
+      const key = mpRelayKey_();
+      if (!key || !mpSafeEqual_(event.parameter.relay, key)) return mpIntakeJson_({ ok: false, error: 'Not accepted.' });
+      let delivery;
+      try { delivery = JSON.parse((event.postData && event.postData.contents) || '{}'); } catch (error) { return mpIntakeJson_({ ok: false, error: 'Body is not JSON.' }); }
+      return mpIntakeJson_({ ok: true, summary: mpProcessRelay_(delivery) });
+    } catch (error) {
+      console.error(error);
+      return mpIntakeJson_({ ok: false, error: 'Could not process the delivery.' });
+    }
+  }
   try {
     const fields = mpIntakeFields_(event);
     const key = mpIntakeKey_();

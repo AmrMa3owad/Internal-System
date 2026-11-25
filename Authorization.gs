@@ -88,6 +88,7 @@ function mpAssertGenericOperationAllowed_(sheetName, operation) {
   if (sheetName === 'Assignments') throw new Error('Team assignments are managed only through the assignment workflow.');
   if (sheetName === 'AccessLog') throw new Error('The access log is written only by the sign-in workflow.');
   if (sheetName === 'Documents' && operation === 'create') throw new Error('Documents are created only by uploading a file.');
+  if (['Conversations', 'Messages', 'WebhookEvents'].indexOf(sheetName) !== -1) throw new Error('Chats are managed only through the Inbox.');
 }
 
 /**

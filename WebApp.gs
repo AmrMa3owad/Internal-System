@@ -71,7 +71,7 @@ function mpAccessDeniedHtml_(message, seenAs) {
 
 // --------------------------------------------------------------- Metadata
 
-const MP_UI_LABEL_FIELDS_ = { Users: 'FullName', Leads: 'FullName', Clients: 'FullName', Companies: 'CompanyName', Cases: 'CaseTitle', Consultations: 'ConsultationDate', Transactions: 'Amount', FollowUps: 'Title', Documents: 'FileName', ExternalPartners: 'Name', Referrals: 'PartnerID', ReferralWork: 'Title', ReferralPayments: 'Amount' };
+const MP_UI_LABEL_FIELDS_ = { Users: 'FullName', Leads: 'FullName', Clients: 'FullName', Companies: 'CompanyName', Cases: 'CaseTitle', Consultations: 'ConsultationDate', Transactions: 'Amount', FollowUps: 'Title', Documents: 'FileName', ExternalPartners: 'Name', Referrals: 'PartnerID', ReferralWork: 'Title', ReferralPayments: 'Amount', Conversations: 'ContactName' };
 
 const MP_UI_REQUIRED_ = {
   Users: ['FullName', 'Email', 'Role'], Leads: ['FullName', 'Source'], Clients: ['FullName'], Companies: ['CompanyName'],
@@ -173,6 +173,7 @@ function mpUiRecordLabel_(entity, record) {
     return mpIsBlank_(record.Title) ? name : name + ' · ' + mpPlainText_(record.Title);
   }
   if (entity === 'ReferralPayments') return 'Payment ' + record.Amount;
+  if (entity === 'Conversations') return mpPlainText_(record.ContactName || record.ContactHandle || record.ExternalThreadID);
   return mpPlainText_(record[MP_UI_LABEL_FIELDS_[entity]] || record[MP_SCHEMAS[entity][0]]);
 }
 
@@ -221,6 +222,7 @@ function mpApiBootstrap_(actor) {
   profile.assignable = MP_CONFIG.ASSIGNABLE_ENTITIES;
   profile.assigneeFields = MP_ASSIGNEE_FIELDS;
   profile.upload = { maxBytes: MP_CONFIG.MAX_UPLOAD_BYTES, extensions: MP_CONFIG.UPLOAD_EXTENSIONS };
+  profile.channels = mpChannelsConnected_();
   return profile;
 }
 
@@ -256,8 +258,8 @@ function mpHandlingFor_(entity, records) {
 }
 
 const MP_UI_RELATED_ = {
-  Leads: [['Consultations', 'LeadID'], ['FollowUps', 'LeadID'], ['Documents', 'EntityID', 'LEAD']],
-  Clients: [['Cases', 'ClientID'], ['Referrals', 'ClientID'], ['Consultations', 'ClientID'], ['Transactions', 'ClientID'], ['FollowUps', 'ClientID'], ['Documents', 'EntityID', 'CLIENT']],
+  Leads: [['Conversations', 'LeadID'], ['Consultations', 'LeadID'], ['FollowUps', 'LeadID'], ['Documents', 'EntityID', 'LEAD']],
+  Clients: [['Cases', 'ClientID'], ['Conversations', 'ClientID'], ['Referrals', 'ClientID'], ['Consultations', 'ClientID'], ['Transactions', 'ClientID'], ['FollowUps', 'ClientID'], ['Documents', 'EntityID', 'CLIENT']],
   Companies: [['Clients', 'CompanyID'], ['Leads', 'CompanyID']],
   Cases: [['Referrals', 'CaseID'], ['Transactions', 'CaseID'], ['FollowUps', 'CaseID'], ['Documents', 'EntityID', 'CASE']],
   ExternalPartners: [['Referrals', 'PartnerID']],
@@ -388,6 +390,10 @@ function mpApiDashboard_(actor) {
       out.sections.referrals.receivedThisMonth = mpRound2_(active('ReferralPayments').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; })
         .reduce(function(total, item) { return total + Number(item.Amount || 0); }, 0));
     }
+  }
+  if (mpCan_(actor.role, 'Conversations', 'read')) {
+    const chats = active('Conversations').filter(function(item) { return item.Status === 'OPEN'; });
+    out.sections.inbox = { unread: chats.reduce(function(sum, item) { return sum + Number(item.UnreadCount || 0); }, 0), unreadChats: chats.filter(function(item) { return Number(item.UnreadCount || 0) > 0; }).length };
   }
   if (mpCanSeeFinancials_(actor.role)) {
     const transactions = active('Transactions').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; });

@@ -15,7 +15,7 @@
  */
 
 /** Entities exposed through the generic list/get/create/update/archive API. */
-const MP_API_ENTITIES_ = ['Users', 'Leads', 'Clients', 'Companies', 'Cases', 'Consultations', 'Transactions', 'FollowUps', 'Documents', 'ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'];
+const MP_API_ENTITIES_ = ['Users', 'Leads', 'Clients', 'Companies', 'Cases', 'Consultations', 'Transactions', 'FollowUps', 'Documents', 'ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments', 'Conversations'];
 
 function mpApiRespond_(callback) {
   try { return mpSuccess_(callback()); }

@@ -17,6 +17,10 @@ This repository contains the internal Mohamy Plus legal CRM: the Stage 1 databas
 - `Referrals.gs` — referral and partner-job money: shares, task fees, reimbursed expenses, settlement.
 - `Backup.gs` — nightly copies of the database, and `restoreFromBackup()`.
 - `Intake.gs` — `doPost()`: website and channel inquiries arrive as new leads.
+- `LiveSync.gs` — live updates: the cache-only "what changed?" check (`apiSyncState`) and the trigger that notices hand edits in the spreadsheet.
+- `Channels.gs` — WhatsApp, Messenger, Instagram, and lead-ad automation: incoming messages to leads and chats, the Inbox, replies, templates, auto-replies, and WhatsApp reminders.
+- `relay/worker.js` — the Cloudflare Worker that checks Meta/TikTok signatures and forwards deliveries to the CRM (not uploaded to Apps Script).
+- `CHANNELS_SETUP.md` — step-by-step setup for Meta, WhatsApp, Instagram, TikTok, and the relay.
 - `I18n.html` — English and Arabic interface text.
 - `Index.html`, `Styles.html`, `App.html` — the single-page web app (vanilla JS, no external libraries or CDNs).
 - `Code.gs` — protected administrative wrappers and isolated runtime tests.
@@ -264,6 +268,20 @@ Example for any other website form:
 
 Without the right key nothing is saved. **Issue a new link** at any time and the old one stops working. More than 40 submissions in 10 minutes are refused. Reading WhatsApp or Instagram directly needs Meta's business APIs, which this app does not connect to; use an automation tool, or have someone enter those inquiries by hand.
 
+## Messaging channels and the Inbox
+
+WhatsApp chats, Messenger and Instagram messages, Facebook/Instagram comments, and Facebook/Instagram/TikTok lead-ad forms arrive automatically through a small Cloudflare relay (`relay/worker.js`) that checks each platform's signature, because Apps Script cannot. Setup: **[CHANNELS_SETUP.md](CHANNELS_SETUP.md)**.
+
+- A new sender becomes a **New lead** (source WhatsApp / Facebook / Instagram / TikTok; phone, or a social profile when there is no phone), or joins the existing client or lead with the same WhatsApp number. Owners and partners are emailed.
+- **Inbox** (menu, with an unread count): every chat with its history, delivery ticks, and a reply box. Owners and partners assign chats; the assignee joins the lead's or client's team. Lawyers and assistants see chats assigned to them or linked to their records.
+- Meta's rules are enforced: free replies within 24 hours of the person's last message; after that, WhatsApp uses an approved **template** and Messenger/Instagram wait for them to write; one private reply per comment within 7 days.
+- **Instant auto-reply** (Arabic or English, matched to their message) on the first message, and again after a chosen number of quiet days.
+- **WhatsApp reminders** the day before each consultation, from an approved template (name, date, time), sent once.
+- Lead and client pages have a **WhatsApp chat** button and a Chats tab.
+- Owners manage tokens (write-only), the relay link, auto-replies, templates, and reminders in **Settings → Channels**, which also lists recent deliveries and lets failed lead forms be retried.
+
+`node tools/channels-test.mjs` runs the whole path locally: signed webhooks through the real relay code into the CRM, with a stand-in for Meta's API.
+
 ## Security page (owners)
 
 **More → Security** shows:
@@ -277,7 +295,9 @@ A code is stored against the one email it was sent to and only signs in that use
 ## Speed
 
 - Opening the app is one round trip: owners get the first screen built into the page, and code-signed-in staff make one `apiStart` call.
-- Sheet contents are kept in Apps Script's shared cache for 15 minutes, with a version stamp per sheet. Every change made through the app replaces that stamp, so everyone sees app changes immediately. Saves always read the real sheet under the lock, so edit-conflict checks never use a cached copy. **Edits typed directly into the spreadsheet appear in the app within 15 minutes.**
+- Sheet contents are kept in Apps Script's shared cache for 15 minutes, with a version stamp per sheet. Every change made through the app replaces that stamp. Saves always read the real sheet under the lock, so edit-conflict checks never use a cached copy.
+- **Live updates, no refresh needed.** Every open screen asks every 5 seconds (15 seconds when the window is in the background, never when the tab is hidden) which sheets changed. That call reads only the cache. If the screen shows changed data (a list, a record, Today, the Inbox), it reloads quietly. It never interrupts someone typing, an open form, an open menu, or selected text; the update waits until they finish. The Inbox badge follows new messages everywhere.
+- **Edits typed directly into the spreadsheet** are picked up the same way, through an installable *on change* trigger that `installMohamyPlus()` adds (and `restoreFromBackup()` moves to the restored copy). Without it, hand edits still appear within 15 minutes.
 - The browser keeps screens you have visited and shows them instantly, then refreshes them quietly. Any change you make clears them.
 - `LastLogin` is written at most every 6 hours instead of on every visit.
 - `node tools/perf-check.js` counts the slow Google calls each screen makes. Actions slower than 2.5 s are logged under **Executions** in Apps Script.
