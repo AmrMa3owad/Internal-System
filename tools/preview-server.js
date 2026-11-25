@@ -68,7 +68,7 @@ insert('Leads', { FullName: 'Laila Fouad', Email: 'laila@example.test', Source: 
 insert('Leads', { FullName: 'Hossam Gaber', Phone: '+201001110013', Source: 'REFERRAL', Status: 'LOST', LostReason: 'Chose another firm' }, ownerId);
 
 insert('Consultations', { LeadID: leadNew.LeadID, AssignedLawyer: lawyer.UserID, ConsultationType: 'In person', ConsultationDate: cairo(2, '11:00'), Duration: 45, Fee: 800, MeetingLocation: 'Main office' }, ownerId);
-insert('Consultations', { ClientID: clientC.ClientID, AssignedLawyer: partner.UserID, ConsultationType: 'Video call', ConsultationDate: cairo(4, '17:00'), Duration: 30, Fee: 0, PaymentStatus: 'WAIVED' }, ownerId);
+insert('Consultations', { ClientID: clientC.ClientID, AssignedLawyer: partner.UserID, ConsultationType: 'Video call', ConsultationDate: cairo(4, '17:00'), Duration: 30, Fee: 0, PaymentStatus: 'WAIVED', PaymentNote: 'Free first call for a returning client.' }, ownerId);
 
 insert('FollowUps', { CaseID: case1.CaseID, ClientID: clientA.ClientID, AssignedTo: lawyer.UserID, Title: 'Prepare hearing memo', DueDate: cairo(1), Priority: 'HIGH' }, ownerId);
 insert('FollowUps', { CaseID: case2.CaseID, ClientID: clientB.ClientID, AssignedTo: assistant.UserID, Title: 'Collect marriage certificate copy', DueDate: cairo(-2), Priority: 'MEDIUM' }, ownerId);
@@ -101,6 +101,10 @@ const sharedNow = fn('mpDbGetById_')('Referrals', sharedRef.ReferralID, false);
 update('Referrals', sharedRef.ReferralID, { FinalProfit: 24000, Status: 'COMPLETED' }, sharedNow.Version, ownerId);
 insert('Referrals', { PartnerID: alex.PartnerID, CaseID: labourCase.CaseID, Scope: 'FULL', ExternalWork: 'WHOLE_CASE', ReferredAt: cairo(-50) }, ownerId);
 insert('ReferralPayments', { ReferralID: sharedRef.ReferralID, Amount: 5000, PaymentMethod: 'INSTAPAY', PaymentDate: cairo(-3) }, ownerId);
+// Administrative work our junior lawyer does for a partner: fee per task, partner reimburses expenses.
+const adminJob = insert('Referrals', { PartnerID: alex.PartnerID, Scope: 'ADMIN_ONLY', Title: 'Register a company at GAFI', AssignedTo: lawyer.UserID, ReferredAt: cairo(-6) }, ownerId);
+insert('ReferralWork', { ReferralID: adminJob.ReferralID, Title: 'Submitted the incorporation papers', WorkDate: cairo(-4), Fee: 1500, Expenses: 350, DoneBy: lawyer.UserID }, ownerId);
+insert('ReferralWork', { ReferralID: adminJob.ReferralID, Title: 'Collected the commercial register extract', WorkDate: cairo(-1), Fee: 800, Expenses: 120, DoneBy: lawyer.UserID }, ownerId);
 
 // 'guest' behaves like a personal Gmail visitor Google does not identify: the app shows the email-code sign-in.
 const IDENTITIES = { owner: runtime.ownerEmail, partner: 'partner@demo.test', lawyer: 'lawyer@demo.test', assistant: 'assistant@demo.test', guest: '' };
@@ -111,11 +115,13 @@ function escapeHtml(value) {
   return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/** ?screen=list:Cases | detail:Cases | form:Cases | edit:Cases | convert | upload | settings  (first active record is used). */
+/** ?screen=list:Cases | detail:Cases[:last|:Field=VALUE] | form:Cases | edit:Cases | convert | upload | settings  (first active record is used). */
 function startScreen(screen, actor) {
   if (!screen) return null;
   const [kind, entity, which] = String(screen).split(':');
-  const first = (name) => fn('mpApiList_')(actor, name, { limit: 1, sortBy: fn('mpUiCreatedField_')(name), sortDirection: which === 'last' ? 'desc' : 'asc' }).records[0];
+  // which: 'last', or field=value (e.g. detail:Referrals:Scope=ADMIN_ONLY)
+  const filters = which && which.indexOf('=') !== -1 ? { [which.split('=')[0]]: which.split('=')[1] } : null;
+  const first = (name) => fn('mpApiList_')(actor, name, { limit: 1, filters, sortBy: fn('mpUiCreatedField_')(name), sortDirection: which === 'last' ? 'desc' : 'asc' }).records[0];
   if (kind === 'list') return { route: { view: 'list', entity } };
   if (kind === 'settings') return { route: { view: 'settings' } };
   if (kind === 'security') return { route: { view: 'security' } };
@@ -207,9 +213,29 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // Lead intake, as the deployed web app's doPost: lets the website be tested against this preview.
+  if (req.method === 'POST' && url.pathname === '/exec') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; if (body.length > 1e6) req.destroy(); });
+    req.on('end', () => {
+      const parameter = Object.fromEntries(url.searchParams);
+      const type = String(req.headers['content-type'] || '');
+      if (/x-www-form-urlencoded/.test(type)) Object.assign(parameter, Object.fromEntries(new URLSearchParams(body)));
+      runtime.setActiveEmail('');
+      const out = fn('doPost')({ parameter, postData: { type, contents: body } });
+      console.log('[preview] website lead: ' + out.getContent());
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(out.getContent());
+    });
+    return;
+  }
   res.writeHead(404); res.end();
 });
 
+// Website leads are on in the preview; the link is printed so the website can be pointed at it.
+runtime.setActiveEmail(IDENTITIES.owner);
+const intakeKey = must(fn('apiSetLeadIntake')(true), 'apiSetLeadIntake').url.split('key=')[1];
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`Mohamy Plus preview on http://127.0.0.1:${PORT}/  (roles: ${Object.keys(IDENTITIES).map((r) => '?as=' + r).join(', ')})`);
+  console.log(`Website lead link for local testing: http://127.0.0.1:${PORT}/exec?key=${intakeKey}`);
 });

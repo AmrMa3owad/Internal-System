@@ -124,6 +124,7 @@ function mpSetupDatabase_(options) {
       isNew = true;
     } else if (boundId) {
       spreadsheet = SpreadsheetApp.openById(boundId);
+      mpUpgradeSchema_(spreadsheet);
       const preflight = mpInspectDatabaseCompatibility_(spreadsheet);
       const nonblankIssues = preflight.issues.filter(function(issue) { return issue.indexOf('missing required worksheet') === -1; });
       if (nonblankIssues.length) throw new Error('Database schema is incompatible; no changes were made. ' + nonblankIssues.join(' '));
@@ -155,6 +156,7 @@ function mpSetupDatabase_(options) {
     const settingsResult = mpSeedSettings_(spreadsheet);
     const bootstrap = mpBootstrapOwner_(spreadsheet);
     if (!boundId && !options.spreadsheet) properties.setProperty(MP_CONFIG.DATABASE_ID_PROPERTY, spreadsheet.getId());
+    if (!options.spreadsheet) properties.setProperty(MP_SCHEMA_VERSION_PROPERTY_, MP_SCHEMA_VERSION_);
     const documents = (options.spreadsheet || MP_EXECUTION_DATABASE_ID_) ? { created: false } : mpEnsureDocumentsFolder_();
     if (!options.spreadsheet) Object.keys(MP_SCHEMAS).forEach(function(name) { mpInvalidateRows_(name); });
     mpInvalidateRows_();
@@ -221,7 +223,7 @@ const MP_SHARED_CACHE_CHUNK_ = 40000;
 const MP_SHARED_CACHE_MAX_CHUNKS_ = 40;
 
 /** Clears every per-request cache (Apps Script starts each request empty; tests simulate that). */
-function mpResetExecutionCaches_() { MP_ROWS_CACHE_ = {}; MP_SPREADSHEET_CACHE_ = {}; MP_SCOPE_CACHE_ = {}; }
+function mpResetExecutionCaches_() { MP_ROWS_CACHE_ = {}; MP_SPREADSHEET_CACHE_ = {}; MP_SCOPE_CACHE_ = {}; MP_SCHEMA_CHECKED_ = false; }
 
 /** Call after (never before) writing to a sheet. With no name, only this request's copies are dropped. */
 function mpInvalidateRows_(sheetName) {
@@ -327,8 +329,83 @@ function mpHas_(object, key) { return !!object && Object.prototype.hasOwnPropert
 function mpSheet_(sheetName) {
   if (!MP_SCHEMAS[sheetName]) throw new Error('Unknown entity: ' + sheetName + '.');
   const spreadsheet = mpGetDatabase_();
+  mpEnsureSchemaCurrent_(spreadsheet);
   const sheet = spreadsheet.getSheetByName(sheetName);
   return sheet || mpCreateMissingSheet_(spreadsheet, sheetName);
+}
+
+// ------------------------------------------------------------ Schema upgrades
+/**
+ * Bump when MP_SCHEMAS gains columns or a validation list changes. The first
+ * request after an update upgrades the live spreadsheet once: new columns are
+ * inserted at their schema position (existing data moves with its column, so
+ * nothing is lost or overwritten) and dropdown rules are refreshed.
+ */
+const MP_SCHEMA_VERSION_ = '2026-11-25';
+const MP_SCHEMA_VERSION_PROPERTY_ = 'MP_SCHEMA_VERSION';
+var MP_SCHEMA_CHECKED_ = false;
+
+function mpEnsureSchemaCurrent_(spreadsheet) {
+  if (MP_SCHEMA_CHECKED_ || MP_EXECUTION_DATABASE_ID_) return;
+  MP_SCHEMA_CHECKED_ = true;
+  const properties = PropertiesService.getScriptProperties();
+  if (properties.getProperty(MP_SCHEMA_VERSION_PROPERTY_) === MP_SCHEMA_VERSION_) return;
+  mpWithLock_(function() {
+    if (properties.getProperty(MP_SCHEMA_VERSION_PROPERTY_) === MP_SCHEMA_VERSION_) return;
+    const report = mpUpgradeSchema_(spreadsheet);
+    if (!report.skipped.length) properties.setProperty(MP_SCHEMA_VERSION_PROPERTY_, MP_SCHEMA_VERSION_);
+    if (report.added.length || report.skipped.length) console.log('Schema upgrade: added ' + (report.added.join(', ') || 'nothing') + (report.skipped.length ? '; skipped ' + report.skipped.join(', ') : '') + '.');
+  });
+}
+
+/** Columns of an existing sheet that the schema expects, provided the sheet only lacks columns (same order, nothing unknown). */
+function mpMissingColumnsForUpgrade_(actual, expected) {
+  const known = actual.filter(function(header) { return header !== ''; });
+  if (known.some(function(header) { return expected.indexOf(header) === -1; })) return null;
+  if (known.some(function(header, index) { return index > 0 && expected.indexOf(header) < expected.indexOf(known[index - 1]); })) return null;
+  if (known.length !== actual.length) return null;
+  return expected.filter(function(header) { return actual.indexOf(header) === -1; });
+}
+
+/** Header style, text-format ID/phone columns, and dropdowns; keeps the owner's column widths and filters. */
+function mpRefreshSheetRules_(sheet, headers) {
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setFontColor('#ffffff').setBackground('#102a43').setHorizontalAlignment('center');
+  headers.forEach(function(header, index) {
+    if (header.indexOf('ID') !== -1 || ['Phone', 'CommercialRegistrationNumber', 'TaxNumber', 'SettingValue'].indexOf(header) !== -1) {
+      sheet.getRange(2, index + 1, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat('@');
+    }
+  });
+  mpApplySheetValidation_(sheet, headers);
+}
+
+/** Adds missing columns in place and refreshes dropdowns. Never removes or rewrites data. Caller holds the lock. */
+function mpUpgradeSchema_(spreadsheet) {
+  const report = { added: [], skipped: [] };
+  Object.keys(MP_SCHEMAS).forEach(function(name) {
+    const sheet = spreadsheet.getSheetByName(name);
+    if (!sheet || mpSheetIsBlank_(sheet)) return;
+    const expected = MP_SCHEMAS[name];
+    const headers = mpHeaders_(sheet);
+    const missing = mpMissingColumnsForUpgrade_(headers, expected);
+    if (missing === null) { report.skipped.push(name); return; }
+    missing.forEach(function(column) {
+      let after = 0;
+      for (let index = expected.indexOf(column) - 1; index >= 0; index -= 1) {
+        const at = headers.indexOf(expected[index]);
+        if (at !== -1) { after = at + 1; break; }
+      }
+      if (after === 0) sheet.insertColumnBefore(1); else sheet.insertColumnAfter(after);
+      // A new column copies its neighbour's formatting and dropdown; start it clean.
+      sheet.getRange(1, after + 1, Math.max(sheet.getMaxRows(), 2), 1).clearDataValidations();
+      sheet.getRange(1, after + 1).setValue(column);
+      headers.splice(after, 0, column);
+      report.added.push(name + '.' + column);
+    });
+    mpRefreshSheetRules_(sheet, headers);
+    SpreadsheetApp.flush();
+    mpInvalidateRows_(name);
+  });
+  return report;
 }
 
 /**
@@ -366,6 +443,7 @@ function mpRows_(sheetName) {
   if (!cached) {
     const target = mpSnapshotTarget_(sheetName);
     if (MP_LOCK_DEPTH_ === 0) cached = mpReadSnapshot_(target);
+    if (cached && MP_SCHEMAS[sheetName].some(function(header) { return cached.headers.indexOf(header) === -1; })) cached = null;
     if (!cached) {
       cached = mpReadSheetRecords_(sheetName);
       mpWriteSnapshot_(target, cached);
@@ -504,8 +582,12 @@ function mpInsertRecordLocked_(sheetName, input, confirmed, actorId, trustedFiel
   const duplicates = mpFindDuplicates_(sheetName, record, '');
   mpAssertDuplicateReview_(sheetName, duplicates, confirmed);
   const sheet = mpSheet_(sheetName); const headers = mpHeaders_(sheet); const idColumn = MP_SCHEMAS[sheetName][0];
-  record[idColumn] = mpNewId_(sheetName); mpApplyCreateDefaults_(sheetName, record, mpNowIso_()); mpAppendRecordChecked_(sheet, headers, record);
+  record[idColumn] = mpNewId_(sheetName); mpApplyCreateDefaults_(sheetName, record, mpNowIso_());
+  const paymentOverride = sheetName === 'Consultations' && mpApplyConsultationPayment_(record, null, true, actorId);
+  if (sheetName === 'Referrals') mpStampReferralAcceptance_(record, actorId);
+  mpAppendRecordChecked_(sheet, headers, record);
   try {
+    if (paymentOverride) mpLogPaymentOverride_(record, actorId);
     if (sheetName === 'Transactions') mpSyncTransactionDependents_([record], actorId);
     if (sheetName === 'ReferralWork' || sheetName === 'ReferralPayments') mpRecalculateReferrals_([record.ReferralID], actorId);
     mpLogActivity_(sheetName, record[idColumn], 'CREATED', 'Created ' + sheetName.slice(0, -1) + '.', actorId);
@@ -537,8 +619,13 @@ function mpDbUpdate_(sheetName, id, input, expectedVersion, actorId) {
     mpValidateReferences_(sheetName, record);
     const duplicates = mpFindDuplicates_(sheetName, record, id);
     mpAssertDuplicateReview_(sheetName, duplicates, duplicateReview.confirmed);
-    mpApplyUpdateDefaults_(sheetName, record); record.Version = Number(record.Version || 1) + 1; mpWriteRecordChecked_(result.sheet, result.headers, record._rowNumber, record);
+    mpApplyUpdateDefaults_(sheetName, record);
+    const paymentRequested = ['PaymentStatus', 'PaymentNote', 'IsPaid', 'Fee'].some(function(field) { return mpHas_(changes, field); });
+    const paymentOverride = sheetName === 'Consultations' && mpApplyConsultationPayment_(record, prior, paymentRequested, actorId);
+    if (sheetName === 'Referrals') mpStampReferralAcceptance_(record, actorId);
+    record.Version = Number(record.Version || 1) + 1; mpWriteRecordChecked_(result.sheet, result.headers, record._rowNumber, record);
     try {
+      if (paymentOverride) mpLogPaymentOverride_(record, actorId);
       if (sheetName === 'Transactions') mpSyncTransactionDependents_([prior, record], actorId);
       if (sheetName === 'ReferralWork' || sheetName === 'ReferralPayments') mpRecalculateReferrals_([prior.ReferralID, record.ReferralID], actorId);
       mpLogActivity_(sheetName, id, 'UPDATED', 'Updated ' + sheetName.slice(0, -1) + '.', actorId);
@@ -616,7 +703,6 @@ function mpApplyUpdateDefaults_(sheetName, record) {
   const now = mpNowIso_();
   if (MP_SCHEMAS[sheetName].indexOf('UpdatedAt') !== -1) record.UpdatedAt = now;
   if (sheetName === 'Cases') mpRefreshCaseFinancials_(record);
-  if (sheetName === 'Consultations') mpDeriveConsultationPayment_(record, mpRows_('Transactions').records, false);
   if (sheetName === 'Referrals') mpReferralDerive_(record);
   mpApplyLifecycleFields_(sheetName, record, now);
 }
@@ -628,18 +714,55 @@ function mpRefreshCaseFinancials_(caseRecord, transactions) {
 }
 
 /**
- * Derives PaymentStatus from active INCOME transactions linked to the
- * consultation. WAIVED is a deliberate decision and is never overridden.
- * Without force, a consultation with no linked income keeps its manual status.
+ * PaymentStatus comes from the active INCOME transactions linked to the
+ * consultation: none -> UNPAID, less than the fee -> PARTIALLY_PAID, the fee or
+ * more -> PAID. The only exception is a deliberate manual decision (PAID or
+ * WAIVED without matching payments), which needs a written reason in
+ * PaymentNote; an owner or partner must make it (mpApplyConsultationPayment_).
+ *
+ * explicitRequest: the caller asked for this status (create, or a payment
+ * field changed). An unsupported manual status is then an error; otherwise
+ * (e.g. a recalculation after a payment changed) the status is simply derived.
+ * Returns true when a manual decision is in effect.
  */
-function mpDeriveConsultationPayment_(consultation, transactions, force) {
-  if (consultation.PaymentStatus === 'WAIVED') { consultation.IsPaid = false; return; }
+function mpDeriveConsultationPayment_(consultation, transactions, explicitRequest) {
   const income = transactions.filter(function(transaction) { return transaction.IsArchived !== true && transaction.ConsultationID === consultation.ConsultationID && transaction.Type === 'INCOME'; });
-  if (!income.length && !force) return;
   const paid = income.reduce(function(sum, transaction) { return sum + Number(transaction.Amount || 0); }, 0);
   const fee = Number(consultation.Fee || 0);
-  consultation.PaymentStatus = paid <= 0 ? 'UNPAID' : (fee > 0 && paid < fee ? 'PARTIALLY_PAID' : 'PAID');
+  const fromPayments = paid <= 0 ? 'UNPAID' : (fee > 0 && paid < fee ? 'PARTIALLY_PAID' : 'PAID');
+  const wanted = consultation.PaymentStatus;
+  const manual = MP_CONFIG.MANUAL_PAYMENT_STATUSES.indexOf(wanted) !== -1 && wanted !== fromPayments;
+  if (manual && mpIsBlank_(consultation.PaymentNote) && explicitRequest) {
+    throw new Error('To mark this consultation ' + wanted + ' without a recorded payment, an owner or partner must give a reason in PaymentNote. Otherwise record the payment and the status updates itself.');
+  }
+  const keepManual = manual && !mpIsBlank_(consultation.PaymentNote);
+  if (!keepManual) { consultation.PaymentStatus = fromPayments; consultation.PaymentNote = ''; }
   consultation.IsPaid = consultation.PaymentStatus === 'PAID';
+  return keepManual;
+}
+
+function mpActorIsSenior_(actorId) {
+  const user = mpIsBlank_(actorId) ? null : mpDbGetById_('Users', actorId, false);
+  return !!user && user.Status === 'ACTIVE' && MP_SENIOR_ROLES_.indexOf(user.Role) !== -1;
+}
+
+/**
+ * Applies the payment rules on create/update. Only owners and partners may set
+ * or change a manual decision. Returns true when a new manual decision should
+ * be written to the history.
+ */
+function mpApplyConsultationPayment_(record, prior, explicitRequest, actorId) {
+  const wasManual = !!prior && !mpIsBlank_(prior.PaymentNote) && MP_CONFIG.MANUAL_PAYMENT_STATUSES.indexOf(prior.PaymentStatus) !== -1;
+  const manual = mpDeriveConsultationPayment_(record, mpRows_('Transactions').records, explicitRequest);
+  const changed = !prior || prior.PaymentStatus !== record.PaymentStatus || String(prior.PaymentNote || '') !== String(record.PaymentNote || '');
+  if (explicitRequest && changed && (manual || wasManual) && !mpActorIsSenior_(actorId)) {
+    throw mpForbidden_('Only owners and partners can set a payment status by hand. Record the payment instead.');
+  }
+  return manual && changed;
+}
+
+function mpLogPaymentOverride_(consultation, actorId) {
+  mpLogActivity_('Consultations', consultation.ConsultationID, 'PAYMENT_STATUS_SET_MANUALLY', 'Payment status set to ' + consultation.PaymentStatus + ' by hand. Reason: ' + consultation.PaymentNote, actorId);
 }
 
 function mpHasActiveReference_(sheetName, fieldName, value, optionalEntityType, predicate) {
@@ -658,12 +781,13 @@ const MP_OPEN_WORK_ = Object.freeze({
   Leads: function(record) { return ['CONVERTED', 'LOST', 'NOT_QUALIFIED'].indexOf(record.Status) === -1; },
   Cases: function(record) { return MP_CONFIG.CLOSED_CASE_STATUSES.indexOf(record.Status) === -1; },
   Consultations: function(record) { return record.Status === 'SCHEDULED'; },
-  FollowUps: function(record) { return record.Status === 'OPEN'; }
+  FollowUps: function(record) { return record.Status === 'OPEN'; },
+  Referrals: function(record) { return MP_CONFIG.CLOSED_REFERRAL_STATUSES.indexOf(record.Status) === -1; }
 });
 
 function mpAssertNoActiveChildrenBeforeArchive_(sheetName, id) {
   const relationships = {
-    Users: [['Leads', 'AssignedTo', null, MP_OPEN_WORK_.Leads], ['Cases', 'AssignedLawyer', null, MP_OPEN_WORK_.Cases], ['Consultations', 'AssignedLawyer', null, MP_OPEN_WORK_.Consultations], ['FollowUps', 'AssignedTo', null, MP_OPEN_WORK_.FollowUps]],
+    Users: [['Leads', 'AssignedTo', null, MP_OPEN_WORK_.Leads], ['Cases', 'AssignedLawyer', null, MP_OPEN_WORK_.Cases], ['Consultations', 'AssignedLawyer', null, MP_OPEN_WORK_.Consultations], ['FollowUps', 'AssignedTo', null, MP_OPEN_WORK_.FollowUps], ['Referrals', 'AssignedTo', null, MP_OPEN_WORK_.Referrals]],
     Leads: [['Consultations', 'LeadID'], ['FollowUps', 'LeadID'], ['Documents', 'EntityID', 'LEAD']],
     Companies: [['Clients', 'CompanyID'], ['Leads', 'CompanyID']],
     ExternalPartners: [['Referrals', 'PartnerID']],
@@ -705,9 +829,9 @@ function mpRecalculateAffectedConsultations_(consultationIds, actorId) {
   ids.forEach(function(consultationId) {
     const record = rows.records.filter(function(item) { return item.ConsultationID === consultationId && item.IsArchived !== true; })[0];
     if (!record) return;
-    const before = record.PaymentStatus + '|' + String(record.IsPaid);
-    mpDeriveConsultationPayment_(record, transactions, true);
-    if (before === record.PaymentStatus + '|' + String(record.IsPaid)) return;
+    const before = record.PaymentStatus + '|' + String(record.IsPaid) + '|' + record.PaymentNote;
+    mpDeriveConsultationPayment_(record, transactions, false);
+    if (before === record.PaymentStatus + '|' + String(record.IsPaid) + '|' + record.PaymentNote) return;
     record.Version = Number(record.Version || 1) + 1;
     mpWriteRecordChecked_(rows.sheet, rows.headers, record._rowNumber, record);
     mpLogActivity_('Consultations', consultationId, 'PAYMENT_STATUS_RECALCULATED', 'Payment status set to ' + record.PaymentStatus + ' from linked transactions.', actorId);

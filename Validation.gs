@@ -73,6 +73,7 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       }
       record.PaymentStatus = mpAssertEnum_(record.PaymentStatus, MP_CONFIG.PAYMENT_STATUSES, 'PaymentStatus', true);
       record.IsPaid = record.PaymentStatus === 'PAID';
+      record.PaymentNote = mpIsBlank_(record.PaymentNote) ? '' : mpRequiredText_(record.PaymentNote, 'PaymentNote', 500);
       record.Status = mpAssertEnum_(record.Status || 'SCHEDULED', MP_CONFIG.CONSULTATION_STATUSES, 'Status', true);
       break;
     case 'Transactions':
@@ -101,9 +102,17 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       break;
     case 'Referrals':
       record.PartnerID = mpRequiredText_(record.PartnerID, 'PartnerID', 80);
-      record.CaseID = mpRequiredText_(record.CaseID, 'CaseID', 80);
       record.Scope = mpAssertEnum_(record.Scope, MP_CONFIG.REFERRAL_SCOPES, 'Scope', true);
-      record.ExternalWork = mpAssertEnum_(record.ExternalWork || 'WHOLE_CASE', MP_CONFIG.REFERRAL_WORK_TYPES, 'ExternalWork', true);
+      if (record.Scope === 'ADMIN_ONLY') {
+        // Administrative work for the partner: say what the job is; linking one of our cases is optional.
+        record.Title = mpRequiredText_(record.Title, 'Title', 250);
+        record.CaseID = mpIsBlank_(record.CaseID) ? '' : mpRequiredText_(record.CaseID, 'CaseID', 80);
+        record.ExternalWork = '';
+      } else {
+        record.CaseID = mpRequiredText_(record.CaseID, 'CaseID', 80);
+        record.Title = mpIsBlank_(record.Title) ? '' : mpRequiredText_(record.Title, 'Title', 250);
+        record.ExternalWork = mpAssertEnum_(record.ExternalWork || 'WHOLE_CASE', MP_CONFIG.REFERRAL_WORK_TYPES, 'ExternalWork', true);
+      }
       record.Status = mpAssertEnum_(record.Status || 'ACTIVE', MP_CONFIG.REFERRAL_STATUSES, 'Status', true);
       record.SharePercent = mpValidatePercent_(record.SharePercent, 'SharePercent');
       record.ReferredAt = mpDateIso_(mpIsBlank_(record.ReferredAt) ? mpNowIso_().slice(0, 10) : record.ReferredAt, 'ReferredAt', true);
@@ -118,6 +127,9 @@ function mpValidateRecord_(sheetName, input, isCreate) {
       record.WorkDate = mpDateIso_(mpIsBlank_(record.WorkDate) ? mpNowIso_().slice(0, 10) : record.WorkDate, 'WorkDate', true);
       record.Fee = mpIsBlank_(record.Fee) ? '' : mpToNumber_(record.Fee, 'Fee', true);
       if (record.Fee !== '' && record.Fee < 0) throw new Error('Fee cannot be negative.');
+      // Money our team spent for the task (transport, institution fees) that the partner reimburses.
+      record.Expenses = mpIsBlank_(record.Expenses) ? '' : mpToNumber_(record.Expenses, 'Expenses', true);
+      if (record.Expenses !== '' && record.Expenses < 0) throw new Error('Expenses cannot be negative.');
       break;
     case 'ReferralPayments':
       record.ReferralID = mpRequiredText_(record.ReferralID, 'ReferralID', 80);
@@ -193,7 +205,7 @@ function mpSanitizeRecordText_(record) {
 function mpValidateReferences_(sheetName, record) {
   const checks = {
     Leads: [['CompanyID', 'Companies'], ['AssignedTo', 'Users']],
-    Referrals: [['PartnerID', 'ExternalPartners'], ['CaseID', 'Cases']],
+    Referrals: [['PartnerID', 'ExternalPartners'], ['CaseID', 'Cases'], ['AssignedTo', 'Users']],
     ReferralWork: [['ReferralID', 'Referrals'], ['DoneBy', 'Users']],
     ReferralPayments: [['ReferralID', 'Referrals']],
     Clients: [['CompanyID', 'Companies'], ['AssignedTo', 'Users']],

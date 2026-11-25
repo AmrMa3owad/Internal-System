@@ -143,11 +143,18 @@ function mpApiGet_(actor, entity, id) {
   return mpRedactRecord_(actor, entity, mpApiVisibleRecord_(actor, entity, id));
 }
 
+/** Setting a payment status by hand (with its reason) is an owner/partner decision. */
+function mpAssertPaymentNoteAllowed_(actor, entity, input) {
+  if (entity !== 'Consultations' || !mpHas_(input, 'PaymentNote') || MP_SENIOR_ROLES_.indexOf(actor.role) !== -1) return;
+  throw mpForbidden_('Only owners and partners can set a payment status by hand. Record the payment instead.');
+}
+
 function mpApiCreate_(actor, entity, input) {
   mpApiEntity_(entity);
   mpRequirePermission_(actor, entity, 'create');
   input = input || {};
   mpAssertFinancialInputAllowed_(actor, entity, input);
+  mpAssertPaymentNoteAllowed_(actor, entity, input);
   const scope = mpAccessScope_(actor);
   mpAssertLinksInScope_(scope, entity, input);
   let created;
@@ -170,6 +177,7 @@ function mpApiUpdate_(actor, entity, id, input, expectedVersion) {
   mpRequirePermission_(actor, entity, 'update');
   input = input || {};
   mpAssertFinancialInputAllowed_(actor, entity, input);
+  mpAssertPaymentNoteAllowed_(actor, entity, input);
   const existing = mpApiVisibleRecord_(actor, entity, id);
   if (entity === 'Documents' && mpHas_(input, 'ConfidentialityLevel')) mpApiAssertDocumentInput_(actor, input);
   mpAssertAssigneeChangeAllowed_(actor, entity, input, existing);

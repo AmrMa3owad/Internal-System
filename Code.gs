@@ -25,6 +25,8 @@ function setupDatabase() {
 function mpBindExistingDatabase_(spreadsheetId, persistBinding) {
   if (!spreadsheetId || !/^[a-zA-Z0-9_-]{20,}$/.test(String(spreadsheetId))) throw new Error('A valid Google Sheets spreadsheet ID is required.');
   const spreadsheet = SpreadsheetApp.openById(String(spreadsheetId));
+  // An older Mohamy Plus database only lacks newer columns; add them (data is never changed).
+  mpWithLock_(function() { mpUpgradeSchema_(spreadsheet); });
   const report = mpInspectDatabaseCompatibility_(spreadsheet);
   if (!report.compatible) {
     throw new Error('Spreadsheet is incompatible and was not bound. ' + report.issues.join(' '));
@@ -213,9 +215,27 @@ function mpRunStage1DatabaseTests_() {
       consultation = mpDbGetById_('Consultations', consultation.ConsultationID, false);
       mpTestAssert_(consultation.PaymentStatus === 'PARTIALLY_PAID', 'Archived payment not reflected.');
       mpTestExpectError_(function() { mpDbArchive_('Consultations', consultation.ConsultationID, consultation.Version, actor); }, 'Consultation archived despite active transactions.');
+      // "Paid" without a recorded payment needs an owner/partner decision with a written reason (issue A).
       let manual = mpDbInsert_('Consultations', { ClientID: client.ClientID, ConsultationDate: '2026-01-06T10:00:00+02:00', Duration: 30, Fee: 100, IsPaid: false }, actor);
-      manual = mpDbUpdate_('Consultations', manual.ConsultationID, { IsPaid: true }, manual.Version, actor);
-      mpTestAssert_(manual.PaymentStatus === 'PAID' && manual.IsPaid === true, 'IsPaid-only update did not re-derive PaymentStatus.');
+      mpTestExpectError_(function() { mpDbUpdate_('Consultations', manual.ConsultationID, { IsPaid: true }, manual.Version, actor); }, 'IsPaid=true without a payment or reason was accepted.');
+      mpTestExpectError_(function() { mpDbUpdate_('Consultations', manual.ConsultationID, { PaymentStatus: 'PAID' }, manual.Version, actor); }, 'PAID without a payment or reason was accepted.');
+      mpTestExpectError_(function() { mpDbInsert_('Consultations', { ClientID: client.ClientID, ConsultationDate: '2026-01-06T12:00:00+02:00', Duration: 30, Fee: 100, PaymentStatus: 'WAIVED' }, actor); }, 'WAIVED without a reason was accepted.');
+      manual = mpDbUpdate_('Consultations', manual.ConsultationID, { PaymentStatus: 'PAID', PaymentNote: 'Paid in cash at the office; receipt 118.' }, manual.Version, actor);
+      mpTestAssert_(manual.PaymentStatus === 'PAID' && manual.IsPaid === true, 'Owner override with a reason was not kept.');
+      mpTestAssert_(mpListActivities_('Consultations', manual.ConsultationID, 10).some(function(item) { return item.Action === 'PAYMENT_STATUS_SET_MANUALLY' && item.Description.indexOf('receipt 118') !== -1; }), 'Manual payment decision was not written to the history.');
+      manual = mpDbUpdate_('Consultations', manual.ConsultationID, { Notes: 'Follow up next week.' }, manual.Version, actor);
+      mpTestAssert_(manual.PaymentStatus === 'PAID', 'An unrelated edit undid the manual decision.');
+      manual = mpDbUpdate_('Consultations', manual.ConsultationID, { PaymentStatus: 'UNPAID' }, manual.Version, actor);
+      mpTestAssert_(manual.PaymentStatus === 'UNPAID' && manual.PaymentNote === '', 'Clearing the manual decision did not clear its reason.');
+      // A record marked PAID by hand before this rule (no reason) falls back to its real payments when next saved.
+      mpWithLock_(function() {
+        const rows = mpRows_('Consultations');
+        const legacy = rows.records.filter(function(item) { return item.ConsultationID === manual.ConsultationID; })[0];
+        legacy.PaymentStatus = 'PAID'; legacy.IsPaid = true;
+        mpWriteRecordChecked_(rows.sheet, rows.headers, legacy._rowNumber, legacy);
+      });
+      manual = mpDbUpdate_('Consultations', manual.ConsultationID, { Notes: 'Checked.' }, mpDbGetById_('Consultations', manual.ConsultationID, false).Version, actor);
+      mpTestAssert_(manual.PaymentStatus === 'UNPAID', 'An unsupported PAID survived a save.');
     });
     let convertedLead;
     mpTestRun_(results, 'lead conversion, practice areas, and lead archive protection', function() {
@@ -485,6 +505,100 @@ function mpRunStage1DatabaseTests_() {
       const dashboard = mpApiDashboard_(ownerActor);
       mpTestAssert_(dashboard.sections.referrals.owed >= 300 && dashboard.sections.referrals.awaitingPayment >= 1 && mpApiDashboard_(lawyerActor).sections.referrals.owed === undefined, 'Referral dashboard figures are wrong.');
     });
+    mpTestRun_(results, 'referral settles only when the amount owed is known (issue B) and acceptance is recorded', function() {
+      const ownerActor = { userId: actor, role: 'OWNER', email: owner.Email, fullName: owner.FullName };
+      const firm = mpApiCreate_(ownerActor, 'ExternalPartners', { Name: 'Delta Counsel', PartnerType: 'LAWYER', FullShareRate: 25, SharedShareRate: 40 });
+      let referral = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: caseRecord.CaseID, Scope: 'SHARED', Status: 'PROPOSED' });
+      mpTestAssert_(!referral.AcceptedAt && !referral.AcceptedBy, 'A proposed referral was marked accepted.');
+      referral = mpApiUpdate_(ownerActor, 'Referrals', referral.ReferralID, { Status: 'ACTIVE' }, referral.Version);
+      mpTestAssert_(!!referral.AcceptedAt && referral.AcceptedBy === actor, 'Who confirmed the partner accepted was not recorded.');
+      const acceptedAt = referral.AcceptedAt;
+      mpApiCreate_(ownerActor, 'ReferralWork', { ReferralID: referral.ReferralID, Title: 'Registry filing', Fee: 100 });
+      referral = mpDbGetById_('Referrals', referral.ReferralID, false);
+      referral = mpApiUpdate_(ownerActor, 'Referrals', referral.ReferralID, { Status: 'COMPLETED' }, referral.Version);
+      mpApiCreate_(ownerActor, 'ReferralPayments', { ReferralID: referral.ReferralID, Amount: 100 });
+      referral = mpDbGetById_('Referrals', referral.ReferralID, false);
+      mpTestAssert_(referral.Balance === 0 && referral.Status === 'COMPLETED', 'Referral settled before their final profit was entered.');
+      mpTestExpectError_(function() { mpApiUpdate_(ownerActor, 'Referrals', referral.ReferralID, { Status: 'SETTLED' }, referral.Version); }, 'Manual SETTLED accepted without a final profit.');
+      referral = mpApiUpdate_(ownerActor, 'Referrals', referral.ReferralID, { FinalProfit: 2000 }, referral.Version);
+      mpTestAssert_(referral.ExpectedShare === 800 && referral.Balance === 800 && referral.Status === 'COMPLETED' && referral.AcceptedAt === acceptedAt, 'Share after entering the profit is wrong.');
+      mpTestExpectError_(function() { mpApiUpdate_(ownerActor, 'Referrals', referral.ReferralID, { Status: 'SETTLED' }, referral.Version); }, 'Manual SETTLED accepted with money still owed.');
+      mpApiCreate_(ownerActor, 'ReferralPayments', { ReferralID: referral.ReferralID, Amount: 800 });
+      mpTestAssert_(mpDbGetById_('Referrals', referral.ReferralID, false).Status === 'SETTLED', 'Fully paid referral with a known profit did not settle.');
+      // A confirmed zero profit is a real figure: nothing owed beyond our fees.
+      let nothing = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, CaseID: caseRecord.CaseID, Scope: 'FULL' });
+      nothing = mpApiUpdate_(ownerActor, 'Referrals', nothing.ReferralID, { FinalProfit: 0, Status: 'COMPLETED' }, nothing.Version);
+      mpTestAssert_(nothing.Status === 'SETTLED', 'A confirmed zero-profit referral with nothing owed did not settle.');
+    });
+    mpTestRun_(results, 'administrative work for a partner: junior lawyer, per-task fees, reimbursed expenses', function() {
+      const ownerActor = { userId: actor, role: 'OWNER', email: owner.Email, fullName: owner.FullName };
+      const findUser = function(email) { return mpRows_('Users').records.filter(function(user) { return user.Email === email; })[0]; };
+      const lawyerUser = findUser('lawyer@example.test');
+      const assistantUser = findUser('assistant@example.test');
+      const lawyerActor = { userId: lawyerUser.UserID, role: 'LAWYER', email: lawyerUser.Email, fullName: lawyerUser.FullName };
+      const assistantActor = { userId: assistantUser.UserID, role: 'ASSISTANT', email: assistantUser.Email, fullName: assistantUser.FullName };
+      const firm = mpApiCreate_(ownerActor, 'ExternalPartners', { Name: 'Cairo Litigation Group', PartnerType: 'FIRM', FullShareRate: 20, SharedShareRate: 30 });
+
+      mpTestExpectError_(function() { mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, Scope: 'ADMIN_ONLY' }); }, 'Administrative job without a description was accepted.');
+      mpTestExpectError_(function() { mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, Scope: 'FULL' }); }, 'Profit-share referral without a case was accepted.');
+      let job = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, Scope: 'ADMIN_ONLY', Title: 'Register a company at GAFI', AssignedTo: lawyerUser.UserID, SharePercent: 30, FinalProfit: 5000, ExternalWork: 'WHOLE_CASE' });
+      mpTestAssert_(job.CaseID === '' && job.ClientID === '' && job.SharePercent === '' && job.FinalProfit === '' && job.ExternalWork === '' && job.TotalDue === 0 && !!job.AcceptedAt, 'Administrative job fields are wrong.');
+
+      // The assigned junior lawyer sees the job (no case of ours) but none of its money, and logs work and expenses.
+      const seen = mpApiGet_(lawyerActor, 'Referrals', job.ReferralID);
+      mpTestAssert_(seen.Title === 'Register a company at GAFI' && seen.TotalDue === undefined && seen.ExpensesTotal === undefined, 'Assigned lawyer view of the job is wrong.');
+      mpTestAssert_(mpApiDashboard_(lawyerActor).sections.referrals.mine.some(function(item) { return item.ReferralID === job.ReferralID; }), 'Job missing from the lawyer\'s home.');
+      mpTestExpectError_(function() { mpApiCreate_(lawyerActor, 'ReferralWork', { ReferralID: job.ReferralID, Title: 'Visit', Fee: 50 }); }, 'Lawyer priced their own task.');
+      const visit = mpApiCreate_(lawyerActor, 'ReferralWork', { ReferralID: job.ReferralID, Title: 'Submitted papers at GAFI', DoneBy: lawyerUser.UserID, Expenses: 350 });
+      mpApiUpdate_(ownerActor, 'ReferralWork', visit.WorkID, { Fee: 1500 }, mpDbGetById_('ReferralWork', visit.WorkID, false).Version);
+      mpApiCreate_(lawyerActor, 'ReferralWork', { ReferralID: job.ReferralID, Title: 'Collected the certificate', DoneBy: lawyerUser.UserID, Expenses: 150 });
+      job = mpDbGetById_('Referrals', job.ReferralID, false);
+      mpTestAssert_(job.AdminFeesTotal === 1500 && job.ExpensesTotal === 500 && job.ExpectedShare === 0 && job.TotalDue === 2000 && job.Balance === 2000, 'Fees plus expenses were not added up.');
+
+      // Other staff do not see it; it never marks one of our cases as external.
+      mpTestExpectError_(function() { mpApiGet_(assistantActor, 'Referrals', job.ReferralID); }, 'An unassigned assistant saw the job.');
+      mpTestAssert_(Object.keys(mpActiveReferralsByCase_()).every(function(caseId) { return mpActiveReferralsByCase_()[caseId].every(function(item) { return item.referralId !== job.ReferralID; }); }), 'Administrative job was listed as an external case.');
+
+      // An empty job never settles by itself; a fully paid priced job does.
+      let empty = mpApiCreate_(ownerActor, 'Referrals', { PartnerID: firm.PartnerID, Scope: 'ADMIN_ONLY', Title: 'Not priced yet' });
+      empty = mpApiUpdate_(ownerActor, 'Referrals', empty.ReferralID, { Status: 'COMPLETED' }, empty.Version);
+      mpTestAssert_(empty.Status === 'COMPLETED', 'A job with nothing priced settled.');
+      job = mpApiUpdate_(ownerActor, 'Referrals', job.ReferralID, { Status: 'COMPLETED' }, job.Version);
+      mpTestExpectError_(function() { mpApiCreate_(assistantActor, 'ReferralPayments', { ReferralID: job.ReferralID, Amount: 2000 }); }, 'An assistant outside the job recorded its payment.');
+      mpApiCreate_(ownerActor, 'ReferralPayments', { ReferralID: job.ReferralID, Amount: 2000 });
+      job = mpDbGetById_('Referrals', job.ReferralID, false);
+      mpTestAssert_(job.Status === 'SETTLED' && job.Balance === 0 && !!job.ClosedAt, 'Fully paid job did not settle.');
+
+      // Issue C: partner payments are part of the month's income, shown separately from client payments.
+      const finance = mpApiDashboard_(ownerActor).sections.finance;
+      mpTestAssert_(finance.incomeFromPartners >= 2000 && finance.incomeThisMonth === mpRound2_(finance.incomeFromClients + finance.incomeFromPartners), 'Income does not include partner payments: ' + JSON.stringify(finance));
+      mpTestExpectError_(function() { mpDbArchive_('Users', lawyerUser.UserID, lawyerUser.Version, actor); }, 'A user with an open partner job was archived.');
+    });
+    mpTestRun_(results, 'older databases gain new columns in place without losing data', function() {
+      const old = SpreadsheetApp.create('MOHAMY PLUS - UPGRADE TEST - ' + Utilities.getUuid());
+      try {
+        const legacyWork = MP_SCHEMAS.ReferralWork.filter(function(header) { return header !== 'Expenses'; });
+        const workSheet = old.insertSheet('ReferralWork');
+        workSheet.getRange(1, 1, 1, legacyWork.length).setValues([legacyWork]);
+        const values = { WorkID: 'RWK-legacy', ReferralID: 'REF-legacy', Title: 'Old task', WorkDate: '2026-10-01', Fee: 250, Notes: 'kept', IsArchived: false, Version: 1 };
+        workSheet.getRange(2, 1, 1, legacyWork.length).setValues([legacyWork.map(function(header) { return values[header] === undefined ? '' : values[header]; })]);
+        const legacyReferrals = MP_SCHEMAS.Referrals.filter(function(header) { return ['Title', 'AssignedTo', 'AcceptedAt', 'AcceptedBy', 'ExpensesTotal'].indexOf(header) === -1; });
+        const referralSheet = old.insertSheet('Referrals');
+        referralSheet.getRange(1, 1, 1, legacyReferrals.length).setValues([legacyReferrals]);
+        const oldScopeRule = SpreadsheetApp.newDataValidation().requireValueInList(['FULL', 'SHARED'], true).setAllowInvalid(false).build();
+        referralSheet.getRange(2, legacyReferrals.indexOf('Scope') + 1, 10, 1).setDataValidation(oldScopeRule);
+        const report = mpWithLock_(function() { return mpUpgradeSchema_(old); });
+        mpTestAssert_(report.added.indexOf('ReferralWork.Expenses') !== -1 && report.added.indexOf('Referrals.ExpensesTotal') !== -1 && !report.skipped.length, 'Upgrade report is wrong: ' + JSON.stringify(report));
+        const headers = mpHeaders_(workSheet);
+        mpTestAssert_(mpCompareHeaders_(headers, MP_SCHEMAS.ReferralWork).compatible && mpCompareHeaders_(mpHeaders_(referralSheet), MP_SCHEMAS.Referrals).compatible, 'Upgraded headers do not match the schema.');
+        const row = workSheet.getRange(2, 1, 1, headers.length).getValues()[0];
+        mpTestAssert_(row[headers.indexOf('Fee')] === 250 && row[headers.indexOf('Notes')] === 'kept' && row[headers.indexOf('Expenses')] === '' && row[0] === 'RWK-legacy', 'Data moved or was lost during the upgrade.');
+        referralSheet.getRange(2, mpHeaders_(referralSheet).indexOf('Scope') + 1).setValue('ADMIN_ONLY');
+        referralSheet.getRange(2, mpHeaders_(referralSheet).indexOf('Title') + 1).setValue('Free text is allowed here');
+        const again = mpWithLock_(function() { return mpUpgradeSchema_(old); });
+        mpTestAssert_(!again.added.length, 'A second upgrade changed the sheet again.');
+      } finally { DriveApp.getFileById(old.getId()).setTrashed(true); }
+    });
     mpTestRun_(results, 'compatible binding and incompatible-schema rejection', function() {
       const compatibleReport = mpBindExistingDatabase_(sandbox.getId(), false);
       mpTestAssert_(compatibleReport.compatible === true, 'Compatible sandbox did not bind.');
@@ -538,6 +652,10 @@ function installMohamyPlus() {
   const database = SpreadsheetApp.openById(properties.getProperty(MP_CONFIG.DATABASE_ID_PROPERTY));
   log('Database spreadsheet: ' + database.getUrl());
   log('Documents folder created this run: ' + (setup.data.documentsFolderCreated ? 'yes' : 'no (already exists)'));
+  try {
+    if (!mpBackupTriggers_().length) mpInstallDailyBackups_();
+    log('Daily backups: on (' + MP_CONFIG.BACKUP_HOUR + ':00 Cairo time, newest ' + MP_CONFIG.BACKUP_KEEP + ' kept in "' + MP_CONFIG.BACKUP_FOLDER_NAME + '").');
+  } catch (error) { log('Daily backups could not be turned on: ' + error.message + ' (turn them on in Settings).'); }
   log('INSTALL COMPLETE. Next: run runStage1DatabaseTests, then Deploy > New deployment > Web app.');
   return mpSuccess_({ databaseUrl: database.getUrl(), setup: setup.data });
 }

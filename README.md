@@ -14,6 +14,9 @@ This repository contains the internal Mohamy Plus legal CRM: the Stage 1 databas
 - `Access.gs` — record-level access for lawyers and assistants, record teams (`Assignments`), and bulk assignment.
 - `Documents.gs` — file upload from the user's computer into the private documents folder, and checked downloads.
 - `Reminders.gs` — daily email digests and their trigger.
+- `Referrals.gs` — referral and partner-job money: shares, task fees, reimbursed expenses, settlement.
+- `Backup.gs` — nightly copies of the database, and `restoreFromBackup()`.
+- `Intake.gs` — `doPost()`: website and channel inquiries arrive as new leads.
 - `I18n.html` — English and Arabic interface text.
 - `Index.html`, `Styles.html`, `App.html` — the single-page web app (vanilla JS, no external libraries or CDNs).
 - `Code.gs` — protected administrative wrappers and isolated runtime tests.
@@ -75,7 +78,7 @@ Why this model: the script always runs with the owner's access, so staff never n
 ### Signing in
 
 - **Owner (the deploying account), or anyone in the same Google Workspace domain:** Google identifies them, so they go straight in.
-- **Everyone else, including personal @gmail.com accounts:** Google does not tell an "execute as me" web app who the visitor is, so the app shows its own sign-in. The person enters their email, receives a 6-digit code by email, and is signed in on that device for 30 days. The **Sign out** button sits next to their name.
+- **Everyone else, including personal @gmail.com accounts:** Google does not tell an "execute as me" web app who the visitor is, so the app shows its own sign-in. The person enters their email, receives a 6-digit code by email, and is signed in on that device for 7 days (sign-ins made before this limit are also cut to 7 days). The **Sign out** button sits next to their name.
 - Codes expire after 10 minutes and allow 5 attempts. Each email can request 5 codes per hour, and the answer never reveals whether an email is registered. Session tokens are stored only as salted hashes in Script Properties and are re-checked against an **active** `Users` record on every action, so setting someone `INACTIVE` signs them out immediately.
 - Codes are sent with the owner's mail quota (about 100 recipients a day for a personal Gmail account), which reminders share.
 
@@ -187,9 +190,12 @@ Under **Settings → Daily email reminders**, an owner can turn reminders on (a 
 
 Each user switches between English and العربية with the button at the bottom of the menu. The choice is saved on their user record (`Users.Language`) and also sets the language of their reminder emails. Arabic switches the layout to right-to-left and translates the menus, labels, status values, settings, history entries, and the most common server messages. Less common server messages and the content people type stay as written.
 
-## Schema changes in this version
+## Updating an existing database
 
-`Users.Language`, `Clients.AssignedTo`, and a new `Assignments` sheet were added. Nothing has been deployed yet, so start from the regenerated template or a fresh `setupDatabase()`. A spreadsheet built from the older template will be reported as incompatible, and setup will refuse to change it.
+You never need to rebuild the spreadsheet after an update. The first request after `clasp push` and a new deployment version upgrades it once:
+missing sheets are created, missing columns are inserted at their place (existing data moves with its column, nothing is overwritten or removed),
+and dropdown lists are refreshed. A sheet that has unexpected or reordered columns is left untouched and reported in **Executions**.
+`setupDatabase()` and `bindExistingDatabase()` apply the same safe upgrade before checking compatibility.
 
 ## Tests
 
@@ -201,28 +207,62 @@ Run `node tools/local-test-harness.js` for a local check. It loads every `.gs` f
 
 When regenerating the template, `python generate_database_template.py` writes only the workbook. The setup guide is hand-maintained; pass `--write-guide` only to deliberately overwrite it with the generator's version.
 
-## External lawyers and referrals
+## External lawyers, referrals, and admin jobs
 
-External lawyers and law firms are **referral partners**. They never sign in. The app records which work the firm handles itself and which it refers out, and what each partner owes the firm.
+External lawyers and law firms are **partners**. They never sign in. The app records which work the firm handles itself, which it refers out, the administrative work our team does for partners, and what each partner owes the firm. Partners are listed under **External lawyers**, each with two default share rates (*if they handle everything* and *if we do part of the work*).
 
-- **External lawyers** (`ExternalPartners`): a directory with two default share rates: *our share if they handle everything* and *our share if we do part of the work*.
-- **Referrals**: a case (and so its client) referred to a partner, with:
-  - **Who does the work:** *They handle everything* (`FULL`) or *We do part of the work* (`SHARED`, e.g. our team does the administrative work).
-  - **They handle:** court hearings, the whole case, or part of the case.
-  - **Our share (%):** filled from the partner's matching default when left blank, and editable per referral.
-  - **Their final profit**, entered when the work is done.
-- **Our work on referrals** (`ReferralWork`): each task our team does for a shared referral, with its own fee. Lawyers can log work, but only finance roles set fees.
+**Referrals & jobs** has three kinds (*Who does the work*):
+
+| Kind | Our case? | What the partner owes us |
+| --- | --- | --- |
+| **They handle everything** (`FULL`) | Yes, referred out | Our share % of their final profit |
+| **We do part of the work** (`SHARED`) | Yes, referred out | A bigger share % of their final profit, plus our task fees and expenses |
+| **Admin work for them** (`ADMIN_ONLY`) | No — their matter | Our agreed fee for each task, plus the expenses we paid (transport, institution fees) |
+
+- An **admin job** is started from the partner's page (**New admin job**). Give it a title (e.g. *Register a company at GAFI*) and assign a junior lawyer. That lawyer, and anyone added to its team, sees the job and its tasks on their home page, but none of the money.
+- **Our tasks & expenses** (`ReferralWork`): each task has a date, who did it, the agreed **fee** (set by finance roles only), and **expenses we paid** that the partner reimburses (lawyers can record these).
 - **Partner payments** (`ReferralPayments`): money received from the partner.
 
-What the partner owes is calculated automatically:
+`Our share = final profit × share %` (none for admin jobs) · `Total owed = our share + task fees + expenses` · `Still owed = total owed − received`
 
-`Our share = final profit × share %` · `Total owed = our share + our work fees` · `Still owed = total owed − received`
+**Settled** means everything owed is known *and* received. A referral is never settled while their final profit (and our share) is still missing — an unknown profit is not treated as zero — and an admin job is never settled before at least one task is priced. A completed referral that meets this becomes Settled automatically, and goes back to Completed if a payment is removed. Setting *Settled* by hand is refused unless both conditions hold.
 
-A completed referral that is fully paid becomes **Settled**, and goes back to Completed if a payment is removed. Cases and clients show **External · Firm** or **Shared · Firm**, and both lists can be filtered to *Internal* or *External*. The owner's home page shows what partners still owe.
+**Acceptance:** start a referral as *Proposed* while the partner is deciding. When it becomes *Active*, the app records when, and who confirmed it (`AcceptedAt`, `AcceptedBy`).
 
-Access: owners and partners add partners and referrals. Finance roles (owner, partner, assistant) see shares and amounts and record partner payments. Lawyers see who handles a case and can log their work, but never the money. Lawyers and assistants see a referral only if they can see its case. A partner with active referrals, or a referral with payments, cannot be archived, and new referrals can only go to active partners.
+Cases and clients referred out show **External · Firm** or **Shared · Firm**, and both lists filter to *Internal* or *External*; admin jobs never mark one of our cases as external. Owners and partners create referrals and jobs; finance roles see amounts and record partner payments; lawyers and assistants see a referral if they can see its case, are assigned to it or on its team, or logged work on it. A partner with active referrals, a referral with payments, or a user with an open assigned job cannot be archived.
 
-Databases created before this version gain the four new sheets automatically the first time they are used.
+## Consultation payments
+
+A consultation's payment status comes from the payments recorded against it: none → *Unpaid*, less than the fee → *Partly paid*, the fee or more → *Paid*. Only owners and partners can mark a consultation *Paid* or *Waived* without matching payments, and they must write the reason (`PaymentNote`); the decision and reason go into its history. Other staff do not see these controls and simply record the payment. A consultation marked *Paid* by hand before this rule existed returns to its real status the next time it is saved.
+
+## Income
+
+**Income this month** on the home page = client payments (`Transactions`, type Income) **+** partner payments (`ReferralPayments`), shown with the split. They are two separate ledgers, so nothing is counted twice.
+
+## Backups and restore
+
+Every night at 02:00 (Cairo) a full copy of the database spreadsheet is saved in the private Drive folder **MOHAMY PLUS - BACKUPS**; the newest 30 are kept. `installMohamyPlus()` turns this on; owners can switch it off, see the last backup, or **Back up now** in **Settings**.
+
+To restore: open the backup copy in Drive and check it, then in the Apps Script editor run `restoreFromBackup('<backup spreadsheet id>')`. The app switches to that copy after confirming it is a compatible database; the damaged spreadsheet is not changed. Practise this once before you rely on it.
+
+## Website and channel leads
+
+So no inquiry is missed, owners can turn on **Settings → Website leads**. This gives a private link. Your website form (or an automation tool such as Make or Zapier relaying WhatsApp, Instagram, or Facebook messages) sends each inquiry there as a `POST` with `name`, `phone` and/or `email`, `message`, and `source` (`WEBSITE`, `WHATSAPP`, `INSTAGRAM`, `FACEBOOK`, `TIKTOK`, …). Each one becomes a **New** lead, possible duplicates are kept and flagged in the lead's history for review, and owners and partners get an email.
+
+**The firm's website ([github.com/AmrMa3owad/Mohamy-Plus](https://github.com/AmrMa3owad/Mohamy-Plus), a separate repository) is connected:** its `crm.intakeUrl` in `src/config.mjs` holds the private link; after issuing a new link, update it there, run `node src/build.mjs`, and publish. Its consultation wizard and contact form then save every request as a lead — with the practice area, priority (*Urgent* → High, *Time-sensitive* → Urgent), form, language, and the ad's `utm_source`/`utm_campaign` — and still open WhatsApp. The same submission sent twice within 10 minutes is saved once. To test locally, `node tools/preview-server.js` prints a local lead link and accepts posts at `/exec`.
+
+Example for any other website form:
+
+```html
+<form method="POST" action="PASTE-THE-PRIVATE-LINK-HERE">
+  <input name="name" required> <input name="phone"> <input name="email" type="email">
+  <textarea name="message"></textarea> <input type="hidden" name="source" value="WEBSITE">
+  <input name="website" style="display:none" tabindex="-1" autocomplete="off"> <!-- spam trap: leave empty -->
+  <button>Send</button>
+</form>
+```
+
+Without the right key nothing is saved. **Issue a new link** at any time and the old one stops working. More than 40 submissions in 10 minutes are refused. Reading WhatsApp or Instagram directly needs Meta's business APIs, which this app does not connect to; use an automation tool, or have someone enter those inquiries by hand.
 
 ## Security page (owners)
 

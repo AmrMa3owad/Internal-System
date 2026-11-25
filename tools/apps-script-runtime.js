@@ -20,6 +20,7 @@ function formatDate(date, timeZone, pattern) {
   new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
     .formatToParts(date).forEach((part) => { parts[part.type] = part.value; });
   if (pattern === 'yyyy-MM-dd') return `${parts.year}-${parts.month}-${parts.day}`;
+  if (pattern === 'yyyy-MM-dd HH:mm') return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
   if (pattern !== "yyyy-MM-dd'T'HH:mm:ssXXX") throw new Error('Fake formatDate does not support pattern ' + pattern);
   const localAsUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
   const offset = Math.round((localAsUtc - Math.floor(date.getTime() / 1000) * 1000) / 60000);
@@ -65,6 +66,14 @@ class FakeSheet {
   setRowHeight() { return this; }
   setColumnWidths() { return this; }
   getFilter() { return this.filter; }
+  /** Inserts an empty column after column `after` (1-based); cells, formats, and dropdowns to the right shift. */
+  insertColumnAfter(after) {
+    this.rows.forEach((row) => { if (row && row.length > after) row.splice(after, 0, ''); });
+    const shift = (map) => { const next = {}; Object.keys(map).forEach((key) => { const c = Number(key); next[c > after ? c + 1 : c] = map[key]; }); next[after + 1] = map[after]; return next; };
+    this.formats = shift(this.formats); this.validations = shift(this.validations);
+    return this;
+  }
+  insertColumnBefore(before) { return this.insertColumnAfter(before - 1); }
   cell(r, c) { return (this.rows[r - 1] || [])[c - 1]; }
   write(r, c, value) {
     const rule = this.validations[c];
@@ -103,6 +112,7 @@ class FakeRange {
   setValue(value) { STATS.writes += 1; this.sheet.write(this.row, this.column, value); return this; }
   setNumberFormat(format) { for (let c = 0; c < this.numColumns; c += 1) this.sheet.formats[this.column + c] = format; return this; }
   getNumberFormat() { return this.sheet.formats[this.column] || 'General'; }
+  clearDataValidations() { for (let c = 0; c < this.numColumns; c += 1) this.sheet.validations[this.column + c] = null; return this; }
   setDataValidation(rule) { for (let c = 0; c < this.numColumns; c += 1) this.sheet.validations[this.column + c] = rule.allowInvalid ? null : rule.list; return this; }
   setFontWeight() { return this; }
   setFontColor() { return this; }
@@ -141,6 +151,7 @@ function createRuntime(options) {
   const outbox = [];
   const cache = new Map();
   let clockOffset = 0;
+  let fileClock = 0;
   const iterator = (items) => { let i = 0; return { hasNext: () => i < items.length, next: () => items[i++] }; };
   class FakeBlob {
     constructor(bytes, contentType, name) { this.bytes = Array.from(bytes || []); this.contentType = contentType; this.name = name; }
@@ -154,9 +165,11 @@ function createRuntime(options) {
     getName() { return this.name; }
     setTrashed(flag) { if (flag) trashed.add(this.id); }
     createFile(blob) { const file = new FakeFile(blob, this); driveItems.set(file.id, file); return file; }
+    getFiles() { return iterator(Array.from(driveItems.values()).filter((item) => item instanceof FakeFile && item.folder === this && !trashed.has(item.id))); }
   }
   class FakeFile {
-    constructor(blob, folder) { this.id = 'file' + crypto.randomBytes(12).toString('hex'); this.blob = blob; this.folder = folder; }
+    constructor(blob, folder) { this.id = 'file' + crypto.randomBytes(12).toString('hex'); this.blob = blob; this.folder = folder; this.created = new Date(Date.now() + (fileClock += 1)); }
+    getDateCreated() { return this.created; }
     getId() { return this.id; }
     getName() { return this.blob.getName(); }
     getBlob() { return this.blob; }
@@ -230,8 +243,26 @@ function createRuntime(options) {
         const item = driveItems.get(id);
         if (item instanceof FakeFile) { if (trashed.has(id)) throw new Error('File is in trash: ' + id); return item; }
         // Spreadsheets, folders, and the script project itself: an owner-owned file outside any folder.
-        return { getId: () => id, getOwner: () => ({ getEmail: () => ownerEmail }), setTrashed: (flag) => { if (flag) trashed.add(id); }, getParents: () => iterator([]) };
+        return {
+          getId: () => id, getOwner: () => ({ getEmail: () => ownerEmail }), setTrashed: (flag) => { if (flag) trashed.add(id); }, getParents: () => iterator([]),
+          // Copying a spreadsheet: the copy is a real fake spreadsheet (so it can be restored) filed in the folder.
+          makeCopy(name, folder) {
+            const source = spreadsheets.get(id);
+            if (!source) throw new Error('Only spreadsheets can be copied in the fake.');
+            const copy = new FakeSpreadsheet(name);
+            copy.sheets = source.sheets.map((sheet) => { const clone = new FakeSheet(sheet.name); clone.rows = sheet.rows.map((row) => (row || []).slice()); clone.formats = Object.assign({}, sheet.formats); clone.validations = Object.assign({}, sheet.validations); return clone; });
+            spreadsheets.set(copy.id, copy);
+            const file = new FakeFile(new FakeBlob([], 'application/vnd.google-apps.spreadsheet', name), folder);
+            file.id = copy.id;
+            driveItems.set(file.id, file);
+            return file;
+          }
+        };
       }
+    },
+    ContentService: {
+      MimeType: { JSON: 'application/json', TEXT: 'text/plain' },
+      createTextOutput(text) { const out = { text: String(text), mime: 'text/plain', getContent: () => out.text, setMimeType(m) { out.mime = m; return out; }, getMimeType: () => out.mime }; return out; }
     },
     MailApp: {
       sendEmail(message) { outbox.push(message); },
@@ -276,6 +307,7 @@ function createRuntime(options) {
     /** Moves the cache clock forward (to expire sign-in codes in tests). */
     advanceCacheClock: (ms) => { clockOffset += ms; },
     triggers,
+    spreadsheets,
     /** Stores a file outside the documents folder (for the folder-check test). */
     createLooseFile: (name, text) => { const file = new FakeFile(new FakeBlob(Array.from(Buffer.from(text)), 'text/plain', name), null); driveItems.set(file.id, file); return file.id; },
     getActiveEmail: () => activeEmail

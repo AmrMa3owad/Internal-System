@@ -2,3 +2,6 @@
 !appsscript.json
 !*.gs
 !*.html
+
+# The website (github.com/AmrMa3owad/Mohamy-Plus) is a separate repository; never upload it if it is cloned here.
+Mohamy-Plus/**

@@ -124,11 +124,12 @@ const lang = as(LAWYER, 'apiSetMyLanguage', 'AR');
 const langBoot = as(LAWYER, 'apiGetAppBootstrap');
 check('flow: language preference persists for the user', lang.ok && langBoot.ok && langBoot.data.language === 'AR' && langBoot.data.restricted === true);
 const reminderStatus = as(OWNER, 'apiSetDailyReminders', true);
-check('flow: owner turns on daily reminders (07:00 Cairo trigger)', reminderStatus.ok && runtime.triggers.length === 1 && runtime.triggers[0].spec.hour === 7 && runtime.triggers[0].spec.timeZone === 'Africa/Cairo');
+const reminderTriggers = () => runtime.triggers.filter((trigger) => trigger.getHandlerFunction() === 'dailyReminderTrigger');
+check('flow: owner turns on daily reminders (07:00 Cairo trigger)', reminderStatus.ok && reminderTriggers().length === 1 && reminderTriggers()[0].spec.hour === 7 && reminderTriggers()[0].spec.timeZone === 'Africa/Cairo');
 check('flow: lawyer cannot change reminders', as(LAWYER, 'apiSetDailyReminders', false).ok === false);
 const todayCairo = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
 const dueToday = as(LAWYER, 'apiCreate', 'FollowUps', { ClientID: clientId, AssignedTo: flowLawyer.data.UserID, Title: 'Call client about hearing', DueDate: todayCairo });
-const sendResult = fn('dailyReminderTrigger')({ triggerUid: runtime.triggers[0].getUniqueId() });
+const sendResult = fn('dailyReminderTrigger')({ triggerUid: reminderTriggers()[0].getUniqueId() });
 const lawyerMail = runtime.outbox.filter((mail) => mail.to === LAWYER)[0];
 check('flow: the genuine trigger emails the lawyer an Arabic digest with their task', dueToday.ok && sendResult.ok && !!lawyerMail && lawyerMail.body.indexOf('Call client about hearing') !== -1 && lawyerMail.htmlBody.indexOf('dir="rtl"') !== -1, JSON.stringify(dueToday.error || sendResult));
 runtime.setActiveEmail(OWNER);
@@ -258,6 +259,110 @@ const lawyerAfterUpdate = as('unassigned@example.test', 'apiStart');
 const ownerReferrals = ['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].map((name) => as(OWNER, 'apiListView', name, {})).filter((r) => !r.ok)[0] || { ok: true };
 check('update: an older database gains the referral sheets automatically', lawyerAfterUpdate.ok && ownerReferrals.ok && ['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].every((name) => !!liveDb.getSheetByName(name)), JSON.stringify({ lawyer: lawyerAfterUpdate.ok || lawyerAfterUpdate.error, owner: ownerReferrals.ok || ownerReferrals.error, sheets: ['ExternalPartners', 'Referrals', 'ReferralWork', 'ReferralPayments'].map((name) => !!liveDb.getSheetByName(name)) }));
 runtime.setActiveEmail(OWNER);
+
+// An existing database from before this version: missing columns are added in place on first use.
+{
+  const props = fn('PropertiesService').getScriptProperties();
+  const consultSheet = liveDb.getSheetByName('Consultations');
+  const header = consultSheet.rows[0];
+  const at = header.indexOf('PaymentNote');
+  const before = as(OWNER, 'apiCreate', 'Consultations', { ClientID: clientId, ConsultationDate: '2026-12-02T10:00', Duration: 30, Fee: 400, Notes: 'made before the update' });
+  consultSheet.rows.forEach((row) => { if (row && row.length > at) row.splice(at, 1); });
+  const refSheet = liveDb.getSheetByName('Referrals');
+  const scopeColumn = refSheet.rows[0].indexOf('Scope') + 1;
+  refSheet.validations[scopeColumn] = ['FULL', 'SHARED'];
+  props.deleteProperty('MP_SCHEMA_VERSION');
+  fn('mpResetExecutionCaches_')();
+  runtime.advanceCacheClock(60 * 60 * 1000);
+  const started = as(OWNER, 'apiStart');
+  const kept = as(OWNER, 'apiGet', 'Consultations', before.data.ConsultationID);
+  const waived = as(OWNER, 'apiCreate', 'Consultations', { ClientID: clientId, ConsultationDate: '2026-12-03T10:00', Duration: 30, Fee: 400, PaymentStatus: 'WAIVED', PaymentNote: 'Pro bono for a long-standing client.' });
+  const partner = as(OWNER, 'apiCreate', 'ExternalPartners', { Name: 'Upgrade Partner', PartnerType: 'LAWYER' });
+  const job = as(OWNER, 'apiCreate', 'Referrals', { PartnerID: partner.data && partner.data.PartnerID, Scope: 'ADMIN_ONLY', Title: 'Court registry errand' });
+  check('update: older sheets gain new columns in place, keep their data, and accept new values', started.ok && kept.ok && kept.data.Notes === 'made before the update' && kept.data.Fee === 400
+    && consultSheet.rows[0].indexOf('PaymentNote') === at && waived.ok && waived.data.PaymentNote.indexOf('Pro bono') === 0 && job.ok && props.getProperty('MP_SCHEMA_VERSION') === fn('MP_SCHEMA_VERSION_'),
+    JSON.stringify({ started: started.error, kept: kept.data, waived: waived.error, job: job.error }));
+}
+
+// Payment status comes from recorded payments; only owners/partners set it by hand, with a reason (review issue A).
+{
+  const paidByHand = as(ASSISTANT, 'apiCreate', 'Consultations', { ClientID: clientId, ConsultationDate: '2026-12-04T10:00', Duration: 30, Fee: 500, PaymentStatus: 'PAID' });
+  const withNote = as(ASSISTANT, 'apiCreate', 'Consultations', { ClientID: clientId, ConsultationDate: '2026-12-04T11:00', Duration: 30, Fee: 500, PaymentStatus: 'PAID', PaymentNote: 'trust me' });
+  const assistantForm = as(ASSISTANT, 'apiGetAppBootstrap').data.forms.Consultations.fields.map((f) => f.name);
+  const ownerForm = as(OWNER, 'apiGetAppBootstrap').data.forms.Consultations.fields.map((f) => f.name);
+  check('finance: staff cannot mark a consultation paid without a payment, and do not see the manual controls',
+    paidByHand.ok === false && withNote.ok === false && withNote.error.code === 'FORBIDDEN' && assistantForm.indexOf('PaymentStatus') === -1 && assistantForm.indexOf('PaymentNote') === -1 && ownerForm.indexOf('PaymentNote') !== -1,
+    JSON.stringify({ paidByHand: paidByHand.error, withNote: withNote.error }));
+}
+
+// Daily backups: a full copy, the newest 30 kept, and a restore that switches safely.
+{
+  const turnedOn = as(OWNER, 'apiSetDailyBackups', true);
+  const backupTriggers = runtime.triggers.filter((trigger) => trigger.getHandlerFunction() === 'dailyBackupTrigger');
+  check('backup: owner turns on nightly backups (02:00 Cairo)', turnedOn.ok && backupTriggers.length === 1 && backupTriggers[0].spec.hour === 2 && backupTriggers[0].spec.timeZone === 'Africa/Cairo');
+  check('backup: staff cannot change backups', as(LAWYER, 'apiBackupNow').ok === false && as(LAWYER, 'apiSetDailyBackups', false).ok === false);
+  check('backup: a forged trigger call is refused', fn('dailyBackupTrigger')({ triggerUid: 'forged' }).ok === false);
+  const nightly = fn('dailyBackupTrigger')({ triggerUid: backupTriggers[0].getUniqueId() });
+  for (let i = 0; i < 31; i += 1) as(OWNER, 'apiBackupNow');
+  const status = as(OWNER, 'apiGetBackupStatus');
+  const folder = fn('DriveApp').getFolderById(fn('PropertiesService').getScriptProperties().getProperty('MP_BACKUP_FOLDER_ID'));
+  let kept = 0; const files = folder.getFiles(); while (files.hasNext()) { files.next(); kept += 1; }
+  check('backup: nightly copy runs and only the newest 30 are kept', nightly.ok && status.ok && !!status.data.last && kept === 30, JSON.stringify({ nightly: nightly.error, kept }));
+  const backupId = status.data.last.id;
+  const copy = runtime.spreadsheets.get(backupId);
+  const original = fn('mpCurrentDatabaseId_')();
+  const restored = fn('restoreFromBackup')(backupId);
+  const afterRestore = as(OWNER, 'apiListView', 'Clients', {});
+  check('backup: restoring switches the app to the copy and leaves the old database untouched', !!copy && restored.ok && fn('mpCurrentDatabaseId_')() === backupId && afterRestore.ok && afterRestore.data.total > 0 && runtime.spreadsheets.has(original),
+    JSON.stringify(restored.error || afterRestore.error));
+  fn('restoreFromBackup')(original);
+  runtime.setActiveEmail(OWNER);
+}
+
+// Website / channel leads: a private key, spam traps, and a flood limit.
+{
+  const post = (fields, query) => fn('doPost')({ parameter: Object.assign({}, query || {}, fields), postData: null });
+  const parse = (out) => JSON.parse(out.getContent());
+  check('intake: closed until an owner turns it on', parse(post({ name: 'Early Bird', phone: '+201001112233' }, { key: '' })).ok === false);
+  check('intake: staff cannot turn it on', as(LAWYER, 'apiSetLeadIntake', true).ok === false);
+  const on = as(OWNER, 'apiSetLeadIntake', true);
+  const key = on.ok && on.data.url.split('key=')[1];
+  check('intake: owner gets a private link', on.ok && on.data.enabled && /^[a-f0-9]{64}$/.test(key));
+  const wrong = parse(post({ name: 'Wrong Key', phone: '+201001112233' }, { key: 'x'.repeat(64) }));
+  const mailBefore = runtime.outbox.length;
+  const good = parse(fn('doPost')({ parameter: { key }, postData: { type: 'application/json', contents: JSON.stringify({ name: 'Website Visitor', phone: '+20 100 444 5566', message: 'I need help with a lease.', source: 'website' }) } }));
+  const found = as(OWNER, 'apiListView', 'Leads', { query: 'Website Visitor' });
+  const captured = found.ok && found.data.records[0];
+  const notified = runtime.outbox.slice(mailBefore).some((mail) => /New lead: Website Visitor/.test(mail.subject));
+  check('intake: the right key creates a NEW website lead and emails owners/partners', wrong.ok === false && good.ok === true && !!captured && captured.Source === 'WEBSITE' && captured.Status === 'NEW' && captured.Description === 'I need help with a lease.' && notified,
+    JSON.stringify({ wrong, good, captured }));
+  const bot = parse(post({ name: 'Spam Bot', phone: '+201001110000', website: 'http://spam' }, { key }));
+  check('intake: the hidden spam trap is accepted silently but saves nothing', bot.ok === true && as(OWNER, 'apiListView', 'Leads', { query: 'Spam Bot' }).data.total === 0);
+  check('intake: a submission without contact details is refused', parse(post({ name: 'No Contact' }, { key })).ok === false);
+  // Exactly what the website's consultation wizard sends.
+  const wizard = { name: 'Wizard Visitor', phone: '+20 100 333 2211', message: 'Need help with a shareholder dispute.', practiceArea: 'Arbitration & Dispute', priority: 'Time-sensitive',
+    form: 'consultation', language: 'ar', page: '/ar/', source: 'INSTAGRAM', campaign: 'spring-ads', website: '' };
+  const firstSend = parse(post(wizard, { key }));
+  const resend = parse(post(wizard, { key }));
+  const wizardLeads = as(OWNER, 'apiListView', 'Leads', { query: 'Wizard Visitor' }).data.records;
+  const w = wizardLeads[0] || {};
+  check('intake: website fields map to the lead (area, priority, form, source, campaign) and a resend is saved once',
+    firstSend.ok && resend.ok && wizardLeads.length === 1 && w.PracticeArea === 'COMMERCIAL' && w.Priority === 'URGENT' && w.InquiryType === 'Website consultation request'
+    && w.Source === 'INSTAGRAM' && w.CampaignID === 'spring-ads' && /shareholder dispute/.test(w.Description) && /Wrote in: Arabic/.test(w.Description), JSON.stringify(w));
+  const plainUrgent = parse(post({ name: 'Urgent Visitor', email: 'urgent@example.com', priority: 'Urgent', practiceArea: 'Astrology' }, { key }));
+  const u = as(OWNER, 'apiListView', 'Leads', { query: 'Urgent Visitor' }).data.records[0] || {};
+  check("intake: the website's 'Urgent' is HIGH, an unknown area is left blank but kept in the text", plainUrgent.ok && u.Priority === 'HIGH' && u.PracticeArea === '' && /Astrology/.test(u.Description), JSON.stringify(u));
+  const longName = parse(post({ name: 'L'.repeat(500), phone: '+201001234567' }, { key }));
+  check('intake: over-long input is trimmed instead of losing the inquiry', longName.ok === true);
+  const rotated = as(OWNER, 'apiSetLeadIntake', true);
+  check('intake: issuing a new link stops the old one', rotated.ok && parse(post({ name: 'Old Link', phone: '+201001119999' }, { key })).ok === false);
+  const newKey = rotated.data.url.split('key=')[1];
+  let last = null;
+  for (let i = 0; i < 45; i += 1) last = parse(post({ name: 'Flood ' + i, phone: '+2010022' + String(10000 + i) }, { key: newKey }));
+  check('intake: floods are stopped', last.ok === false && /Too many/.test(last.error));
+  as(OWNER, 'apiSetLeadIntake', false);
+  runtime.setActiveEmail(OWNER);
+}
 
 // Static checks on the HTML Service files.
 const app = fs.readFileSync(path.join(ROOT, 'App.html'), 'utf8');

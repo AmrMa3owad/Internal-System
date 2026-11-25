@@ -78,7 +78,8 @@ const MP_UI_REQUIRED_ = {
   Cases: ['CaseTitle', 'ClientID'], Consultations: ['ConsultationDate', 'Duration'],
   Transactions: ['Type', 'Amount', 'PaymentMethod', 'PaymentDate'], FollowUps: ['Title', 'DueDate'],
   Documents: ['EntityType', 'EntityID'],
-  ExternalPartners: ['Name', 'PartnerType'], Referrals: ['PartnerID', 'CaseID', 'Scope'], ReferralWork: ['ReferralID', 'Title'],
+  // Referrals.CaseID (profit-share kinds) and Referrals.Title (administrative jobs) are required by kind; the form handles that.
+  ExternalPartners: ['Name', 'PartnerType'], Referrals: ['PartnerID', 'Scope'], ReferralWork: ['ReferralID', 'Title'],
   ReferralPayments: ['ReferralID', 'Amount', 'PaymentMethod', 'PaymentDate']
 };
 
@@ -97,8 +98,8 @@ const MP_UI_DERIVED_ = ['Consultations.IsPaid'];
 const MP_UI_TYPES_ = {
   datetime: ['ConsultationDate', 'PaymentDate', 'LastContactAt', 'NextFollowUpAt'],
   date: ['StartDate', 'Deadline', 'DueDate', 'ReferredAt', 'WorkDate'],
-  number: ['AgreedFee', 'Fee', 'Amount', 'Duration', 'FullShareRate', 'SharedShareRate', 'SharePercent', 'FinalProfit'],
-  longtext: ['Description', 'Notes', 'Outcome', 'Address', 'OpposingParties'],
+  number: ['AgreedFee', 'Fee', 'Expenses', 'Amount', 'Duration', 'FullShareRate', 'SharedShareRate', 'SharePercent', 'FinalProfit'],
+  longtext: ['Description', 'Notes', 'Outcome', 'Address', 'OpposingParties', 'PaymentNote'],
   email: ['Email'],
   phone: ['Phone']
 };
@@ -139,8 +140,9 @@ function mpApiFormMeta_(actor) {
     const hidden = mpHiddenFields_(actor, entity);
     const system = MP_SYSTEM_MANAGED_FIELDS[entity] || [];
     const refs = MP_REFERENCE_FIELDS[entity] || {};
+    const seniorOnly = MP_SENIOR_ROLES_.indexOf(actor.role) === -1 ? ['Consultations.PaymentStatus', 'Consultations.PaymentNote'] : [];
     const fields = MP_SCHEMAS[entity].filter(function(field) {
-      return system.indexOf(field) === -1 && hidden.indexOf(field) === -1 && MP_UI_DERIVED_.indexOf(entity + '.' + field) === -1;
+      return system.indexOf(field) === -1 && hidden.indexOf(field) === -1 && MP_UI_DERIVED_.indexOf(entity + '.' + field) === -1 && seniorOnly.indexOf(entity + '.' + field) === -1;
     }).map(function(field) {
       const options = mpUiEnumOptions_(actor, entity, field, settings);
       let type = options ? 'enum' : mpUiFieldType_(field);
@@ -165,7 +167,11 @@ function mpApiAssignableUsers_() {
 function mpUiRecordLabel_(entity, record) {
   if (entity === 'Consultations') return 'Consultation ' + String(record.ConsultationDate || '').slice(0, 16).replace('T', ' ');
   if (entity === 'Transactions') return record.Type + ' ' + record.Amount;
-  if (entity === 'Referrals') { const partner = mpDbGetById_('ExternalPartners', record.PartnerID, true); return partner ? mpPlainText_(partner.Name) : 'Referral'; }
+  if (entity === 'Referrals') {
+    const partner = mpDbGetById_('ExternalPartners', record.PartnerID, true);
+    const name = partner ? mpPlainText_(partner.Name) : 'Referral';
+    return mpIsBlank_(record.Title) ? name : name + ' · ' + mpPlainText_(record.Title);
+  }
   if (entity === 'ReferralPayments') return 'Payment ' + record.Amount;
   return mpPlainText_(record[MP_UI_LABEL_FIELDS_[entity]] || record[MP_SCHEMAS[entity][0]]);
 }
@@ -257,7 +263,7 @@ const MP_UI_RELATED_ = {
   ExternalPartners: [['Referrals', 'PartnerID']],
   Referrals: [['ReferralWork', 'ReferralID'], ['ReferralPayments', 'ReferralID']],
   Consultations: [['Transactions', 'ConsultationID']],
-  Users: [['Leads', 'AssignedTo'], ['Clients', 'AssignedTo'], ['Cases', 'AssignedLawyer'], ['Consultations', 'AssignedLawyer'], ['FollowUps', 'AssignedTo']]
+  Users: [['Leads', 'AssignedTo'], ['Clients', 'AssignedTo'], ['Cases', 'AssignedLawyer'], ['Referrals', 'AssignedTo'], ['Consultations', 'AssignedLawyer'], ['FollowUps', 'AssignedTo']]
 };
 
 /** One record plus its related records (where readable), labels, and history (seniors). */
@@ -369,10 +375,14 @@ function mpApiDashboard_(actor) {
   }
   if (mpCan_(actor.role, 'Referrals', 'read')) {
     const referrals = active('Referrals').filter(function(item) { return item.Status !== 'CANCELLED'; });
+    const open = referrals.filter(function(item) { return item.Status === 'ACTIVE' || item.Status === 'PROPOSED'; });
     out.sections.referrals = {
-      active: referrals.filter(function(item) { return item.Status === 'ACTIVE' || item.Status === 'PROPOSED'; }).length,
-      awaitingPayment: referrals.filter(function(item) { return item.Status === 'COMPLETED'; }).length
+      active: open.length,
+      awaitingPayment: referrals.filter(function(item) { return item.Status === 'COMPLETED'; }).length,
+      // Open partner work the signed-in person leads (e.g. an administrative job).
+      mine: open.filter(function(item) { return item.AssignedTo === actor.userId; }).slice(0, 6).map(function(item) { return mpRedactRecord_(actor, 'Referrals', item); })
     };
+    labelled.push(['Referrals', out.sections.referrals.mine]);
     if (mpCanSeeFinancials_(actor.role)) {
       out.sections.referrals.owed = mpRound2_(referrals.reduce(function(total, item) { return total + Math.max(Number(item.Balance || 0), 0); }, 0));
       out.sections.referrals.receivedThisMonth = mpRound2_(active('ReferralPayments').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; })
@@ -383,10 +393,16 @@ function mpApiDashboard_(actor) {
     const transactions = active('Transactions').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; });
     const sum = function(type) { return transactions.filter(function(item) { return item.Type === type; }).reduce(function(total, item) { return total + Number(item.Amount || 0); }, 0); };
     const openCases = active('Cases').filter(MP_OPEN_WORK_.Cases);
+    // Two separate ledgers, each counted once: client payments (Transactions) and partner payments (ReferralPayments).
+    const fromClients = mpRound2_(sum('INCOME'));
+    const fromPartners = mpCan_(actor.role, 'ReferralPayments', 'read') ? mpRound2_(active('ReferralPayments').filter(function(item) { return String(item.PaymentDate).slice(0, 7) === month; })
+      .reduce(function(total, item) { return total + Number(item.Amount || 0); }, 0)) : 0;
     out.sections.finance = {
       month: month,
-      incomeThisMonth: sum('INCOME'),
-      expenseThisMonth: sum('EXPENSE'),
+      incomeThisMonth: mpRound2_(fromClients + fromPartners),
+      incomeFromClients: fromClients,
+      incomeFromPartners: fromPartners,
+      expenseThisMonth: mpRound2_(sum('EXPENSE')),
       outstanding: openCases.reduce(function(total, item) { return total + Math.max(Number(item.OutstandingBalance || 0), 0); }, 0),
       currency: MP_DEFAULT_SETTINGS.CURRENCY
     };

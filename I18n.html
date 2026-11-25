@@ -63,6 +63,14 @@ window.MP_I18N = {
       owedByPartners: 'Owed by partners', activeReferralsN: '{n} active referrals', totalOwed: 'Total owed to us', receivedSoFar: 'Received',
       theirProfit: 'Their final profit', ourShareOf: 'Our share ({p}%)', ourWorkFees: 'Our work fees', stillOwed: 'Still owed',
       profitPending: 'Add their final profit when the work is done to calculate our share.',
+      ourExpenses: 'Expenses they reimburse', newAdminJob: 'New admin job', adminJobHint: 'Our team does administrative work for this partner: an agreed fee per task, and they cover the expenses (transport, institution fees).',
+      jobNotPriced: 'Add the tasks with their agreed fees; the total updates itself.', partnerJobsMine: 'Partner work assigned to you', noPartnerJobs: 'No partner work is assigned to you.',
+      incomeSplit: 'Clients {c} · partners {p}', paymentAuto: 'Set automatically from recorded payments.', paymentManualNote: 'Marked by hand: {x}',
+      backupsTitle: 'Daily backups', backupsNote: 'A full copy of the database is saved every night in your private Drive folder; the newest {n} copies are kept.',
+      backupsOn: 'On · every night at {h}:00', backupsOff: 'Off', backupNow: 'Back up now', lastBackup: 'Last backup: {d}', noBackupYet: 'No backup yet.', openBackups: 'Open backups folder', backupDone: 'Backup saved.',
+      intakeTitle: 'Website leads', intakeNote: 'Inquiries from your website form (or WhatsApp and Instagram through an automation tool) arrive here as new leads automatically, and owners and partners get an email.',
+      intakeOn: 'On', intakeOff: 'Off', intakeLink: 'Send form submissions (POST) to this private link:', intakeFields: 'Fields: name, phone, email, message, source (WEBSITE, WHATSAPP, INSTAGRAM, FACEBOOK, TIKTOK…).',
+      intakeNewKey: 'Issue a new link', intakeNewKeyConfirm: 'The current link will stop working. Continue?', copyLink: 'Copy link', copied: 'Copied.',
       appearance: 'Appearance', themeLight: 'Light', themeDark: 'Dark', themeAuto: 'Auto', themeAutoHint: 'Auto follows your device', collapseMenu: 'Collapse menu', expandMenu: 'Expand menu',
       daySummary: '{n} thing(s) need your attention today.', daySummaryClear: 'Nothing urgent today — a calm day ahead.'
     },
@@ -124,6 +132,14 @@ window.MP_I18N = {
       owedByPartners: 'مستحق لنا لدى الجهات الخارجية', activeReferralsN: '{n} إحالة نشطة', totalOwed: 'إجمالي المستحق لنا', receivedSoFar: 'المستلم',
       theirProfit: 'صافي ربحهم النهائي', ourShareOf: 'حصتنا ({p}%)', ourWorkFees: 'رسوم أعمالنا', stillOwed: 'المتبقي',
       profitPending: 'أدخل صافي ربحهم النهائي عند انتهاء العمل لحساب حصتنا.',
+      ourExpenses: 'مصروفات يستردونها لنا', newAdminJob: 'مهمة إدارية جديدة', adminJobHint: 'يقوم فريقنا بأعمال إدارية لهذه الجهة: أتعاب متفق عليها لكل مهمة، وتتحمل الجهة المصروفات (المواصلات ورسوم الجهات).',
+      jobNotPriced: 'أضف المهام بأتعابها المتفق عليها، وسيُحدَّث الإجمالي تلقائيًا.', partnerJobsMine: 'أعمال الجهات الخارجية المسندة إليك', noPartnerJobs: 'لا توجد أعمال لجهات خارجية مسندة إليك.',
+      incomeSplit: 'الموكلون {c} · الجهات {p}', paymentAuto: 'تُحدَّد تلقائيًا من الدفعات المسجلة.', paymentManualNote: 'حُددت يدويًا: {x}',
+      backupsTitle: 'النسخ الاحتياطي اليومي', backupsNote: 'تُحفظ نسخة كاملة من قاعدة البيانات كل ليلة في مجلدك الخاص على Drive، ويُحتفظ بأحدث {n} نسخة.',
+      backupsOn: 'مفعّل · كل ليلة الساعة {h}:00', backupsOff: 'متوقف', backupNow: 'نسخ احتياطي الآن', lastBackup: 'آخر نسخة: {d}', noBackupYet: 'لا توجد نسخة بعد.', openBackups: 'فتح مجلد النسخ', backupDone: 'تم حفظ النسخة الاحتياطية.',
+      intakeTitle: 'عملاء الموقع', intakeNote: 'تصل استفسارات نموذج موقعك (أو واتساب وإنستجرام عبر أداة ربط) هنا كعملاء محتملين جدد تلقائيًا، ويصل بريد للمالك والشركاء.',
+      intakeOn: 'مفعّل', intakeOff: 'متوقف', intakeLink: 'أرسل بيانات النموذج (POST) إلى هذا الرابط الخاص:', intakeFields: 'الحقول: name، phone، email، message، source (WEBSITE، WHATSAPP، INSTAGRAM، FACEBOOK، TIKTOK…).',
+      intakeNewKey: 'إصدار رابط جديد', intakeNewKeyConfirm: 'سيتوقف الرابط الحالي عن العمل. هل تريد المتابعة؟', copyLink: 'نسخ الرابط', copied: 'تم النسخ.',
       appearance: 'المظهر', themeLight: 'فاتح', themeDark: 'داكن', themeAuto: 'تلقائي', themeAutoHint: 'التلقائي يتبع إعدادات جهازك', collapseMenu: 'تصغير القائمة', expandMenu: 'توسيع القائمة',
       daySummary: '{n} بند يحتاج إلى متابعتك اليوم.', daySummaryClear: 'لا شيء عاجل اليوم — يوم هادئ.'
     }
@@ -133,15 +149,15 @@ window.MP_I18N = {
       Leads: ['Leads', 'Lead'], Clients: ['Clients', 'Client'], Companies: ['Companies', 'Company'], Cases: ['Cases', 'Case'],
       Consultations: ['Consultations', 'Consultation'], FollowUps: ['Tasks', 'Task'], Transactions: ['Finance', 'Payment'],
       Documents: ['Documents', 'Document'], Users: ['Users', 'User'],
-      ExternalPartners: ['External lawyers', 'External lawyer or firm'], Referrals: ['Referrals', 'Referral'],
-      ReferralWork: ['Our work on referrals', 'Work item'], ReferralPayments: ['Partner payments', 'Partner payment']
+      ExternalPartners: ['External lawyers', 'External lawyer or firm'], Referrals: ['Referrals & jobs', 'Referral'],
+      ReferralWork: ['Our tasks & expenses', 'Task'], ReferralPayments: ['Partner payments', 'Partner payment']
     },
     ar: {
       Leads: ['العملاء المحتملون', 'عميل محتمل'], Clients: ['الموكلون', 'موكل'], Companies: ['الشركات', 'شركة'], Cases: ['القضايا', 'قضية'],
       Consultations: ['الاستشارات', 'استشارة'], FollowUps: ['المهام', 'مهمة'], Transactions: ['الحسابات', 'دفعة'],
       Documents: ['المستندات', 'مستند'], Users: ['المستخدمون', 'مستخدم'],
-      ExternalPartners: ['المحامون والمكاتب الخارجية', 'جهة خارجية'], Referrals: ['الإحالات', 'إحالة'],
-      ReferralWork: ['أعمالنا في الإحالات', 'عمل'], ReferralPayments: ['مدفوعات الجهات الخارجية', 'دفعة من جهة خارجية']
+      ExternalPartners: ['المحامون والمكاتب الخارجية', 'جهة خارجية'], Referrals: ['الإحالات والمهام', 'إحالة'],
+      ReferralWork: ['مهامنا ومصروفاتها', 'مهمة'], ReferralPayments: ['مدفوعات الجهات الخارجية', 'دفعة من جهة خارجية']
     }
   },
   fields: {
@@ -154,7 +170,9 @@ window.MP_I18N = {
       FullShareRate: 'Our share if they handle everything (%)', SharedShareRate: 'Our share if we do part (%)', ReferralID: 'Referral',
       Scope: 'Who does the work', ExternalWork: 'They handle', SharePercent: 'Our share (%)', ReferredAt: 'Referred on',
       FinalProfit: 'Their final profit', ExpectedShare: 'Our share', AdminFeesTotal: 'Our work fees', TotalDue: 'Total owed to us',
-      TotalReceived: 'Received', Balance: 'Still owed', CreatedBy: 'Referred by', WorkDate: 'Date', DoneBy: 'Done by'
+      TotalReceived: 'Received', Balance: 'Still owed', CreatedBy: 'Referred by', WorkDate: 'Date', DoneBy: 'Done by',
+      Title: 'Title', AcceptedAt: 'Partner accepted on', AcceptedBy: 'Acceptance confirmed by', Expenses: 'Expenses we paid (reimbursed)', ExpensesTotal: 'Expenses they reimburse',
+      PaymentNote: 'Reason (when set by hand)'
     },
     ar: {
       FullName: 'الاسم الكامل', Email: 'البريد الإلكتروني', Role: 'الدور', Status: 'الحالة', Language: 'اللغة', CreatedAt: 'تاريخ الإنشاء',
@@ -175,7 +193,9 @@ window.MP_I18N = {
       FullShareRate: 'نسبتنا إذا تولوا كل العمل (%)', SharedShareRate: 'نسبتنا إذا شاركنا في العمل (%)', ReferralID: 'الإحالة',
       Scope: 'من يقوم بالعمل', ExternalWork: 'يتولون', SharePercent: 'نسبتنا (%)', ReferredAt: 'تاريخ الإحالة',
       FinalProfit: 'صافي ربحهم النهائي', ExpectedShare: 'حصتنا', AdminFeesTotal: 'رسوم أعمالنا', TotalDue: 'إجمالي المستحق لنا',
-      TotalReceived: 'المستلم', Balance: 'المتبقي', CreatedBy: 'أحالها', WorkDate: 'التاريخ', DoneBy: 'نفّذها'
+      TotalReceived: 'المستلم', Balance: 'المتبقي', CreatedBy: 'أحالها', WorkDate: 'التاريخ', DoneBy: 'نفّذها',
+      AcceptedAt: 'تاريخ قبول الجهة', AcceptedBy: 'أكّد القبول', Expenses: 'مصروفات دفعناها (تُسترد)', ExpensesTotal: 'مصروفات يستردونها لنا',
+      PaymentNote: 'السبب (عند التحديد يدويًا)'
     }
   },
   enums: {
@@ -197,7 +217,8 @@ window.MP_I18N = {
       GOOGLE_DENIED: 'حساب Google غير مصرّح', SESSION_REJECTED: 'دخول مرفوض لمستخدم موقوف', FLOOD_PROTECTION: 'حماية من الطلبات الكثيفة',
       LIMIT_CLEARED: 'تم السماح بإعادة المحاولة', SESSION_REVOKED: 'تم تسجيل خروج الجهاز',
       FIRM: 'مكتب محاماة', FULL: 'يتولون كل العمل', SHARED: 'نشارك في جزء من العمل', COURT_HEARINGS: 'حضور الجلسات',
-      WHOLE_CASE: 'القضية كاملة', PART_OF_CASE: 'جزء من القضية', PROPOSED: 'مقترحة', SETTLED: 'تمت التسوية'
+      WHOLE_CASE: 'القضية كاملة', PART_OF_CASE: 'جزء من القضية', PROPOSED: 'مقترحة', SETTLED: 'تمت التسوية',
+      ADMIN_ONLY: 'أعمال إدارية لهم (فريقنا)', LEAD_INTAKE_KEY_ISSUED: 'إصدار رابط عملاء الموقع', LEAD_INTAKE_DISABLED: 'إيقاف عملاء الموقع'
     },
     en: {
       EN: 'English', AR: 'العربية (Arabic)', CODE_SENT: 'Code sent', CODE_UNKNOWN_EMAIL: 'Unknown email', CODE_RATE_LIMITED: 'Too many requests',
@@ -205,7 +226,8 @@ window.MP_I18N = {
       GOOGLE_DENIED: 'Google account not allowed', SESSION_REJECTED: 'Deactivated user tried to enter', FLOOD_PROTECTION: 'Flood protection',
       LIMIT_CLEARED: 'Retry allowed', SESSION_REVOKED: 'Device signed out',
       LAWYER: 'Lawyer', FIRM: 'Law firm', FULL: 'They handle everything', SHARED: 'We do part of the work', COURT_HEARINGS: 'Court hearings',
-      WHOLE_CASE: 'The whole case', PART_OF_CASE: 'Part of the case', PROPOSED: 'Proposed', SETTLED: 'Settled'
+      WHOLE_CASE: 'The whole case', PART_OF_CASE: 'Part of the case', PROPOSED: 'Proposed', SETTLED: 'Settled',
+      ADMIN_ONLY: 'Admin work for them (our team)', LEAD_INTAKE_KEY_ISSUED: 'Website-lead link issued', LEAD_INTAKE_DISABLED: 'Website leads turned off'
     }
   },
   settings: {
@@ -222,7 +244,8 @@ window.MP_I18N = {
       CREATED: 'تم الإنشاء', UPDATED: 'تم التعديل', ARCHIVED: 'تمت الأرشفة', CONVERTED: 'تم التحويل إلى موكل', FINANCIALS_RECALCULATED: 'تمت إعادة حساب المبالغ',
       PAYMENT_STATUS_RECALCULATED: 'تم تحديث حالة الدفع', LINKED_TO_CLIENT: 'تم الربط بالموكل', DUPLICATE_REVIEW_CONFIRMED: 'تم الحفظ بعد مراجعة التكرار',
       TEAM_MEMBER_ADDED: 'تمت إضافة عضو إلى الفريق', TEAM_MEMBER_REMOVED: 'تمت إزالة عضو من الفريق', DOWNLOADED: 'تم التنزيل',
-      REFERRAL_TOTALS_RECALCULATED: 'تم تحديث المبالغ المستحقة', REFERRAL_SETTLED: 'تمت التسوية بالكامل', REFERRAL_REOPENED: 'أعيد فتحها بعد تعديل دفعة'
+      REFERRAL_TOTALS_RECALCULATED: 'تم تحديث المبالغ المستحقة', REFERRAL_SETTLED: 'تمت التسوية بالكامل', REFERRAL_REOPENED: 'أعيد فتحها بعد تعديل دفعة',
+      PAYMENT_STATUS_SET_MANUALLY: 'تم تحديد حالة الدفع يدويًا', CAPTURED_AUTOMATICALLY: 'وصل تلقائيًا من نموذج الموقع أو قناة تواصل'
     }
   },
   /** Arabic for the most common server messages; unmatched messages are shown as sent. */
@@ -233,6 +256,10 @@ window.MP_I18N = {
     [/is not allowed to|cannot file documents/, 'لا تملك صلاحية تنفيذ هذا الإجراء.'],
     [/cannot set financial field/, 'لا تملك صلاحية تعديل الحقول المالية.'],
     [/only link records that are assigned to you|only attach documents to records assigned/, 'يمكنك فقط الربط بسجلات مسندة إليك.'],
+    [/set a payment status by hand/, 'المالك والشركاء فقط يمكنهم تحديد حالة الدفع يدويًا. سجّل الدفعة بدلًا من ذلك.'],
+    [/without a recorded payment, an owner or partner must give a reason/, 'سجّل الدفعة أولًا، أو يكتب المالك أو الشريك سببًا لتحديد الحالة يدويًا.'],
+    [/settled only after their final profit/, 'لا يمكن التسوية قبل إدخال صافي ربحهم النهائي ونسبتنا.'],
+    [/settled only when everything owed has been received/, 'لا يمكن التسوية قبل استلام كامل المستحق.'],
     [/Only owners and partners can/, 'المالك والشركاء فقط يمكنهم تغيير الإسناد.'],
     [/Phone is invalid/, 'رقم الهاتف غير صحيح.'],
     [/Email is invalid/, 'البريد الإلكتروني غير صحيح.'],

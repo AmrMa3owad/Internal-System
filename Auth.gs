@@ -11,9 +11,9 @@
  * Protections: codes expire after 10 minutes and allow 5 attempts; at most 5
  * codes per email per hour; responses never reveal whether an email is a
  * user; codes and tokens are stored only as salted SHA-256 hashes; sessions
- * last 30 days and are re-checked against an ACTIVE Users record on every call.
+ * last MP_SESSION_DAYS_ (7) days and are re-checked against an ACTIVE Users record on every call.
  */
-const MP_SESSION_DAYS_ = 30;
+const MP_SESSION_DAYS_ = 7;
 const MP_CODE_MINUTES_ = 10;
 const MP_CODE_ATTEMPTS_ = 5;
 const MP_CODES_PER_HOUR_ = 5;
@@ -70,7 +70,9 @@ function mpSessionEmail_(token) {
   if (!raw) return '';
   try {
     const session = JSON.parse(raw);
-    if (!session.expires || Date.now() > Number(session.expires)) { properties.deleteProperty(key); return ''; }
+    // The created time also caps sessions issued under an older, longer limit.
+    const limit = Math.min(Number(session.expires || 0), Number(session.created || 0) + MP_SESSION_DAYS_ * 86400000);
+    if (!session.expires || !session.created || Date.now() > limit) { properties.deleteProperty(key); return ''; }
     return mpNormalizeEmail_(session.email);
   } catch (error) {
     properties.deleteProperty(key);
@@ -344,7 +346,9 @@ function mpRpcHandlers_() {
     apiSetMyLanguage: apiSetMyLanguage, apiUploadDocument: apiUploadDocument, apiDownloadDocument: apiDownloadDocument,
     apiGetReminderStatus: apiGetReminderStatus, apiSetDailyReminders: apiSetDailyReminders, apiSendRemindersNow: apiSendRemindersNow,
     apiPreviewMyReminder: apiPreviewMyReminder, apiSignOut: apiSignOut, apiStart: apiStart,
-    apiListAccessLog: apiListAccessLog, apiClearSignInLimit: apiClearSignInLimit, apiListSessions: apiListSessions, apiRevokeSession: apiRevokeSession
+    apiListAccessLog: apiListAccessLog, apiClearSignInLimit: apiClearSignInLimit, apiListSessions: apiListSessions, apiRevokeSession: apiRevokeSession,
+    apiGetBackupStatus: apiGetBackupStatus, apiSetDailyBackups: apiSetDailyBackups, apiBackupNow: apiBackupNow,
+    apiGetIntakeStatus: apiGetIntakeStatus, apiSetLeadIntake: apiSetLeadIntake
   };
 }
 

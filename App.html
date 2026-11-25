@@ -84,15 +84,25 @@
       essentials: ['FullName', 'Email', 'Role', 'Language'] },
     ExternalPartners: { icon: 'handshake', title: 'Name', sub: ['FirmName', 'City', 'Phone'], cols: ['PartnerType', 'FullShareRate', 'SharedShareRate', 'Status'], status: 'Status', contact: true,
       essentials: ['Name', 'PartnerType', 'FirmName', 'Phone', 'Email', 'City', 'FullShareRate', 'SharedShareRate'] },
-    Referrals: { icon: 'external', tile: 'lead', sub: ['CaseID', 'ExternalWork', 'Scope'], cols: ['Status', 'SharePercent', 'Balance'], status: 'Status',
-      essentials: ['PartnerID', 'CaseID', 'Scope', 'ExternalWork', 'SharePercent', 'ReferredAt'] },
-    ReferralWork: { icon: 'task', tile: 'task', title: 'Title', sub: ['ReferralID', 'DoneBy'], cols: ['WorkDate', 'Fee'],
-      essentials: ['ReferralID', 'Title', 'WorkDate', 'DoneBy', 'Fee'] },
+    Referrals: { icon: 'external', tile: 'lead', sub: ['CaseID', 'Scope', 'AssignedTo'], cols: ['Status', 'SharePercent', 'Balance'], status: 'Status',
+      essentials: ['PartnerID', 'Scope', 'Title', 'CaseID', 'ExternalWork', 'AssignedTo', 'SharePercent', 'ReferredAt'] },
+    ReferralWork: { icon: 'task', tile: 'task', title: 'Title', sub: ['ReferralID', 'DoneBy'], cols: ['WorkDate', 'Fee', 'Expenses'],
+      essentials: ['ReferralID', 'Title', 'WorkDate', 'DoneBy', 'Fee', 'Expenses'] },
     ReferralPayments: { icon: 'wallet', sub: ['ReferralID', 'PaymentMethod'], cols: ['PaymentDate'],
       essentials: ['ReferralID', 'Amount', 'PaymentDate', 'PaymentMethod'] }
   };
   /** Fields that only make sense in some situations. */
-  var SHOW_IF = { CompanyID: function (values) { return values.ClientType === 'COMPANY'; } };
+  var adminJob = function (values) { return values.Scope === 'ADMIN_ONLY'; };
+  var profitShare = function (values) { return values.Scope !== 'ADMIN_ONLY'; };
+  var SHOW_IF = {
+    CompanyID: function (values) { return values.ClientType === 'COMPANY'; },
+    // Administrative work for a partner has no case of ours and no profit share.
+    'Referrals.CaseID': profitShare, 'Referrals.ExternalWork': profitShare, 'Referrals.SharePercent': profitShare, 'Referrals.FinalProfit': profitShare,
+    // A reason is only asked for when an owner/partner sets Paid or Waived by hand.
+    'Consultations.PaymentNote': function (values) { return values.PaymentStatus === 'PAID' || values.PaymentStatus === 'WAIVED'; }
+  };
+  var REQUIRED_IF = { 'Referrals.CaseID': profitShare, 'Referrals.Title': adminJob };
+  function showIf(entity, name) { return SHOW_IF[entity + '.' + name] || SHOW_IF[name] || null; }
   var NAV = [
     ['home'],
     ['Leads', 'Clients', 'Cases'],
@@ -102,9 +112,9 @@
     ['more', 'Companies', 'Users', 'security', 'settings']
   ];
   var NEW_MENU = ['Leads', 'Clients', 'Cases', 'Referrals', 'FollowUps', 'Consultations', 'Transactions', 'Documents', 'ExternalPartners'];
-  var DATETIME_FIELDS = ['CreatedAt', 'UpdatedAt', 'ArchivedAt', 'ClosedAt', 'CompletedAt', 'LastLogin', 'UploadedAt', 'Timestamp', 'ConsultationDate', 'PaymentDate', 'LastContactAt', 'NextFollowUpAt', 'AddedAt'];
+  var DATETIME_FIELDS = ['CreatedAt', 'UpdatedAt', 'ArchivedAt', 'ClosedAt', 'CompletedAt', 'AcceptedAt', 'LastLogin', 'UploadedAt', 'Timestamp', 'ConsultationDate', 'PaymentDate', 'LastContactAt', 'NextFollowUpAt', 'AddedAt'];
   var DATE_FIELDS = ['StartDate', 'Deadline', 'DueDate', 'ReferredAt', 'WorkDate'];
-  var MONEY_FIELDS = ['AgreedFee', 'TotalPaid', 'OutstandingBalance', 'Fee', 'Amount', 'FinalProfit', 'ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance'];
+  var MONEY_FIELDS = ['AgreedFee', 'TotalPaid', 'OutstandingBalance', 'Fee', 'Expenses', 'Amount', 'FinalProfit', 'ExpectedShare', 'AdminFeesTotal', 'ExpensesTotal', 'TotalDue', 'TotalReceived', 'Balance'];
   var PERCENT_FIELDS = ['SharePercent', 'FullShareRate', 'SharedShareRate'];
   var NEVER_SHOW = ['IsArchived', 'ArchivedAt', 'Version', 'DriveFileID', 'CreatedAt', 'UpdatedAt', 'IsPaid'];
   var PILL_FIELDS = ['Status', 'PaymentStatus', 'Priority', 'Type', 'EntityType', 'ConfidentialityLevel', 'Role', 'Language', 'ClientType', 'Source', 'PracticeArea', 'PaymentMethod', 'Scope', 'ExternalWork', 'PartnerType'];
@@ -371,13 +381,16 @@
     if (meta && meta.ref) return meta.ref;
     var refs = (state.boot && state.boot.references && state.boot.references[entity]) || {};
     if (refs[field]) return refs[field];
-    return { ConvertedClientID: 'Clients', CreatedFromLeadID: 'Leads', RecordedBy: 'Users', UploadedBy: 'Users', AssignedTo: 'Users', AssignedLawyer: 'Users' }[field] || null;
+    return { ConvertedClientID: 'Clients', CreatedFromLeadID: 'Leads', RecordedBy: 'Users', UploadedBy: 'Users', AssignedTo: 'Users', AssignedLawyer: 'Users', AcceptedBy: 'Users' }[field] || null;
   }
   function recordId(entity, record) { return record[formMeta(entity).idField]; }
   function recordLabel(entity, record, labels) {
     if (entity === 'Consultations') return t('consultationOn', { d: friendlyDate(record.ConsultationDate, true) });
     if (entity === 'Transactions') return enumLabel(record.Type || '') + ' · ' + money(record.Amount);
-    if (entity === 'Referrals') return t('referralTo', { x: (labels && labels[record.PartnerID]) || t('partner') });
+    if (entity === 'Referrals') {
+      var partnerName = (labels && labels[record.PartnerID]) || t('partner');
+      return blank(record.Title) ? t('referralTo', { x: partnerName }) : partnerName + ' · ' + record.Title;
+    }
     if (entity === 'ReferralPayments') return t('paymentOf', { x: money(record.Amount) });
     return record[formMeta(entity).labelField] || recordId(entity, record);
   }
@@ -823,7 +836,8 @@
       if (s.leads) makeStat('leads', t('openLeads'), s.leads.open, s.leads.unassigned ? t('unassignedN', { n: s.leads.unassigned }) : t('newThisMonth', { n: s.leads.newThisMonth }), !!s.leads.unassigned, function () { navigate({ view: 'list', entity: 'Leads' }); });
       if (s.consultations) makeStat('consults', t('consultationsWeek'), s.consultations.upcomingCount, t('scheduled'), false, function () { navigate({ view: 'list', entity: 'Consultations', filters: { Status: 'SCHEDULED' } }); });
       if (s.finance) {
-        makeStat('income', t('incomeThisMonth'), money(s.finance.incomeThisMonth), t('expenses', { x: money(s.finance.expenseThisMonth) }), false, function () { navigate({ view: 'list', entity: 'Transactions' }); }, true);
+        var split = s.finance.incomeFromPartners ? t('incomeSplit', { c: money(s.finance.incomeFromClients), p: money(s.finance.incomeFromPartners) }) + ' · ' : '';
+        makeStat('income', t('incomeThisMonth'), money(s.finance.incomeThisMonth), split + t('expenses', { x: money(s.finance.expenseThisMonth) }), false, function () { navigate({ view: 'list', entity: 'Transactions' }); }, true);
         makeStat('outstanding', t('outstanding'), money(s.finance.outstanding), t('acrossOpen'), false, function () { navigate({ view: 'list', entity: 'Cases' }); }, true);
       }
       if (s.referrals && s.referrals.owed !== undefined) {
@@ -878,6 +892,17 @@
           })) : h('div', { class: 'faint', text: t('noMyCases') }));
       };
 
+      var partnerJobsCard = function () {
+        if (!s.referrals || !s.referrals.mine || !s.referrals.mine.length) return null;
+        return h('div', { class: 'card' },
+          h('div', { class: 'card-title' }, h('span', { text: t('partnerJobsMine') }), h('span', { class: 'spacer' }),
+            h('a', { style: 'font:500 13px var(--font-ui)', onclick: function () { navigate({ view: 'list', entity: 'Referrals' }); } }, t('seeAll'))),
+          h('ul', { class: 'feed' }, s.referrals.mine.map(function (item) {
+            return h('li', null, h('span', { class: 'tile-icon lead' }, icon('external')),
+              h('div', { class: 'body' }, detailLink('Referrals', item.ReferralID, recordLabel('Referrals', item, labels), 'title'), h('div', { class: 'ctx' }, joinParts([enumLabel(item.Scope), enumLabel(item.Status)]))));
+          })));
+      };
+
       var side = h('div', { class: 'side-stack' });
       if (senior) {
         // Owners and partners: the firm at a glance first.
@@ -887,10 +912,10 @@
         append(side, [quickActions(), pipelineCard()]);
       } else if (role === 'LAWYER') {
         // Lawyers: their own cases and deadlines.
-        append(side, [myCasesCard(), quickActions(), statsBlock(['tasks', 'consults'])]);
+        append(side, [myCasesCard(), partnerJobsCard(), quickActions(), statsBlock(['tasks', 'consults'])]);
       } else {
         // Assistants: intake, appointments, and payments.
-        append(side, [quickActions(), statsBlock(['consults', 'leads', 'income', 'tasks']), pipelineCard()]);
+        append(side, [partnerJobsCard(), quickActions(), statsBlock(['consults', 'leads', 'income', 'tasks']), pipelineCard()]);
       }
       body.appendChild(h('div', { class: 'home-grid' }, feedCard, side));
     }).catch(function (error) { clear(body).appendChild(h('div', { class: 'alert danger', text: errorMessage(error) })); });
@@ -1158,14 +1183,19 @@
     var line = function (label, value, strong) {
       return h('div', { class: 'money-row', style: 'padding:4px 0' }, h('span', { class: strong ? '' : 'muted', text: label }), h('span', { style: strong ? 'font-weight:600' : '', text: value }));
     };
+    var admin = record.Scope === 'ADMIN_ONLY';
+    var settled = Number(record.Balance) <= 0 && (admin ? due > 0 : hasProfit);
     return h('div', { class: 'card money-card' },
       h('div', { class: 'money-row' }, h('div', null, h('div', { class: 'fact-label', text: t('totalOwed') }), h('div', { class: 'money-big', text: money(due) })),
         h('div', { style: 'text-align:end' }, h('div', { class: 'fact-label', text: t('receivedSoFar') }), h('div', { style: 'font-weight:500', text: money(received) }))),
       h('div', { class: 'progress' }, h('span', { style: 'width:' + pct + '%' })),
-      hasProfit ? line(t('theirProfit'), money(record.FinalProfit)) : h('div', { class: 'faint', style: 'font-size:13px;padding:4px 0', text: t('profitPending') }),
-      line(t('ourShareOf', { p: record.SharePercent === '' || record.SharePercent === undefined ? '—' : Number(record.SharePercent) }), money(record.ExpectedShare)),
+      admin ? (due > 0 ? null : h('div', { class: 'faint', style: 'font-size:13px;padding:4px 0', text: t('jobNotPriced') }))
+        : hasProfit ? line(t('theirProfit'), money(record.FinalProfit)) : h('div', { class: 'faint', style: 'font-size:13px;padding:4px 0', text: t('profitPending') }),
+      admin ? null : line(t('ourShareOf', { p: record.SharePercent === '' || record.SharePercent === undefined ? '—' : Number(record.SharePercent) }), money(record.ExpectedShare)),
       line(t('ourWorkFees'), money(record.AdminFeesTotal)),
-      line(due > 0 && Number(record.Balance) <= 0 ? t('fullyPaid') : t('stillOwed'), money(Math.max(Number(record.Balance || 0), 0)), true));
+      Number(record.ExpensesTotal || 0) > 0 || admin ? line(t('ourExpenses'), money(record.ExpensesTotal)) : null,
+      Number(record.Balance) < 0 ? line(t('overpaid', { x: money(-Number(record.Balance)) }), '', true)
+        : line(settled ? t('fullyPaid') : t('stillOwed'), money(Math.max(Number(record.Balance || 0), 0)), true));
   }
 
   function showDetail(route) {
@@ -1192,6 +1222,11 @@
           var presetLabels = Object.assign({}, labels); presetLabels[record.CaseID] = record.CaseTitle;
           startCreate('Referrals', { CaseID: record.CaseID }, presetLabels, reload);
         } }, icon('external'), t('referExternally')));
+      }
+      if (entity === 'ExternalPartners' && can('Referrals', 'create') && record.IsArchived !== true && record.Status === 'ACTIVE') {
+        var partnerLabels = function () { var copy = Object.assign({}, labels); copy[record.PartnerID] = record.Name; return copy; };
+        actions.push(h('button', { class: 'btn', type: 'button', onclick: function () { startCreate('Referrals', { PartnerID: record.PartnerID, Scope: 'FULL' }, partnerLabels(), reload); } }, icon('external'), t('referExternally')));
+        actions.push(h('button', { class: 'btn gold', type: 'button', onclick: function () { startCreate('Referrals', { PartnerID: record.PartnerID, Scope: 'ADMIN_ONLY' }, partnerLabels(), reload); } }, icon('briefcase'), t('newAdminJob')));
       }
       if (entity === 'Leads' && can('LeadConversion', 'create') && ['CONVERTED', 'LOST', 'NOT_QUALIFIED'].indexOf(record.Status) === -1 && record.IsArchived !== true) {
         actions.push(h('button', { class: 'btn gold', type: 'button', onclick: function () { openConvert(record); } }, icon('swap'), t('convertButton')));
@@ -1243,7 +1278,7 @@
         Object.keys(record).forEach(function (field) {
           if (NEVER_SHOW.indexOf(field) !== -1 || field === formMeta(entity).idField || field === ui.title || field === ui.status) return;
           if (entity === 'Cases' && ['AgreedFee', 'TotalPaid', 'OutstandingBalance'].indexOf(field) !== -1 && Number(record.AgreedFee) > 0) return;
-          if (entity === 'Referrals' && ['ExpectedShare', 'AdminFeesTotal', 'TotalDue', 'TotalReceived', 'Balance', 'FinalProfit'].indexOf(field) !== -1 && record.TotalDue !== undefined) return;
+          if (entity === 'Referrals' && ['ExpectedShare', 'AdminFeesTotal', 'ExpensesTotal', 'TotalDue', 'TotalReceived', 'Balance', 'FinalProfit'].indexOf(field) !== -1 && record.TotalDue !== undefined) return;
           if (blank(record[field])) { if (fieldMeta(entity, field)) empty += 1; return; }
           var fm = fieldMeta(entity, field);
           shown += 1;
@@ -1293,6 +1328,7 @@
       function history() {
         return h('div', { class: 'card' }, data.activities.length ? h('ul', { class: 'timeline' }, data.activities.map(function (activity) {
           var description = state.lang === 'ar' ? ((I.actions.ar || {})[activity.Action] || activity.Description) : activity.Description;
+          if (state.lang === 'ar' && activity.Action === 'PAYMENT_STATUS_SET_MANUALLY' && activity.Description.indexOf('Reason: ') !== -1) description += ' — ' + activity.Description.split('Reason: ')[1];
           return h('li', null, h('div', { dir: 'auto', text: description }),
             h('div', { class: 'meta', dir: 'auto', text: friendlyDate(activity.Timestamp, true) + ' · ' + (labels[activity.PerformedBy] || userName(activity.PerformedBy) || t('system')) }));
         })) : h('div', { class: 'faint', text: t('noHistory') }));
@@ -1451,6 +1487,7 @@
     if (!isEdit) meta.fields.forEach(function (field) { if (field.defaultValue !== null && field.defaultValue !== undefined) defaults[field.name] = field.defaultValue; });
     if (!isEdit && entity === 'FollowUps' && !defaults.DueDate) defaults.DueDate = state.today;
     if (!isEdit && (entity === 'FollowUps' || entity === 'Leads') && state.boot.restricted && !(options.presets || {}).AssignedTo) defaults.AssignedTo = state.boot.userId;
+    if (!isEdit && entity === 'ReferralWork' && !(options.presets || {}).DoneBy) defaults.DoneBy = state.boot.userId;
     var values = Object.assign(defaults, record, options.presets || {});
     var labels = Object.assign({}, options.labels || {});
     var alertBox = h('div');
@@ -1468,27 +1505,37 @@
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
     });
     var hiddenCount = 0;
+    function currentValues() {
+      var current = {};
+      Object.keys(controls).forEach(function (key) { current[key] = controls[key].getValue(); });
+      return current;
+    }
+    function isRequired(field, current) {
+      var rule = REQUIRED_IF[entity + '.' + field.name];
+      return rule ? rule(current) : field.required;
+    }
     function refreshConditions() {
-      Object.keys(SHOW_IF).forEach(function (name) {
-        if (!holders[name]) return;
-        var current = {};
-        Object.keys(controls).forEach(function (key) { current[key] = controls[key].getValue(); });
-        holders[name].hidden = !SHOW_IF[name](current);
+      var current = currentValues();
+      Object.keys(holders).forEach(function (name) {
+        var rule = showIf(entity, name);
+        if (rule) holders[name].hidden = !rule(current);
+        var star = holders[name].querySelector('.req');
+        if (star) star.hidden = !isRequired({ name: name, required: meta.fields.some(function (f) { return f.name === name && f.required; }) }, current);
       });
     }
     ordered.forEach(function (field) {
       var holder = h('div', { class: 'form-field' + (field.type === 'longtext' ? ' wide' : '') });
-      holder.appendChild(h('label', null, fieldLabel(field.name), field.required ? h('span', { class: 'req', text: ' *' }) : null));
+      holder.appendChild(h('label', null, fieldLabel(field.name), field.required || REQUIRED_IF[entity + '.' + field.name] ? h('span', { class: 'req', text: ' *' }) : null));
       if (field.type === 'entityReference') {
         var picker = pickerControl(DOC_TARGETS[values.EntityType], values.EntityID, labels[values.EntityID]);
         controls[field.name] = picker;
         holder.appendChild(picker.el);
       } else {
-        var onChange = field.name === 'ClientType' ? refreshConditions : field.name === 'EntityType' ? function () {
+        var onChange = field.name === 'EntityType' ? function () {
           var replacement = pickerControl(DOC_TARGETS[controls.EntityType.getValue()], '', '');
           holders.EntityID.replaceChild(replacement.el, controls.EntityID.el);
           controls.EntityID = replacement;
-        } : null;
+        } : field.type === 'enum' ? function () { refreshConditions(); } : null;
         var control = buildControl(entity, field, values, labels, onChange, isEdit && field.lockedOnEdit);
         controls[field.name] = control;
         holder.appendChild(control.el);
@@ -1503,16 +1550,28 @@
       grid.appendChild(toggle);
       grid.appendChild(extra);
     }
+    if (entity === 'Referrals' && holders.Scope) {
+      var hint = h('div', { class: 'form-hint wide', text: t('adminJobHint') });
+      holders.Scope.appendChild(hint);
+      var showHint = function () { hint.hidden = controls.Scope.getValue() !== 'ADMIN_ONLY'; };
+      controls.Scope.el.addEventListener('change', showHint);
+      showHint();
+    }
     refreshConditions();
 
     var save = h('button', { class: 'btn primary', type: 'button', text: isEdit ? t('saveChanges') : t('create') });
     function collect() {
       var payload = {};
       var missing = [];
+      var current = currentValues();
       meta.fields.forEach(function (field) {
-        if (holders[field.name] && holders[field.name].hidden && SHOW_IF[field.name]) return;
+        if (holders[field.name] && holders[field.name].hidden && showIf(entity, field.name)) {
+          // A hidden field that already had a value is cleared on purpose (e.g. switching a referral to admin work).
+          if (isEdit && !blank(record[field.name]) && entity === 'Referrals') payload[field.name] = '';
+          return;
+        }
         var value = controls[field.name].getValue();
-        if (field.required && blank(value)) missing.push(fieldLabel(field.name));
+        if (isRequired(field, current) && blank(value)) missing.push(fieldLabel(field.name));
         if (isEdit) { if (!field.lockedOnEdit && comparable(field, value) !== comparable(field, record[field.name])) payload[field.name] = value; }
         else if (!blank(value)) payload[field.name] = value;
       });
@@ -1803,6 +1862,65 @@
       });
       call('apiGetReminderStatus').then(drawStatus).catch(function (error) { status.textContent = errorMessage(error); });
       grid.appendChild(reminderCard);
+    }
+
+    // Owner: nightly backups of the whole database.
+    if (can('Settings', 'update')) {
+      var backupCard = h('div', { class: 'card' }, h('div', { class: 'card-title' }, icon('shield'), t('backupsTitle')));
+      var backupNote = h('p', { text: t('backupsNote', { n: 30 }) });
+      var backupSwitch = h('input', { type: 'checkbox', disabled: true });
+      var backupState = h('span', { class: 'muted', text: t('loading') });
+      var lastLine = h('div', { class: 'faint', style: 'font-size:13px;margin-top:8px' });
+      var folderLink = h('a', { class: 'btn small ghost', target: '_blank', rel: 'noopener', hidden: true }, t('openBackups'));
+      var nowButton = h('button', { class: 'btn small', type: 'button' }, t('backupNow'));
+      var drawBackup = function (info) {
+        backupSwitch.disabled = false; backupSwitch.checked = info.enabled;
+        backupNote.textContent = t('backupsNote', { n: info.keep });
+        backupState.textContent = info.enabled ? t('backupsOn', { h: info.hour }) : t('backupsOff');
+        lastLine.textContent = info.last ? t('lastBackup', { d: friendlyDate(info.last.at, true) }) : t('noBackupYet');
+        folderLink.hidden = !info.folderUrl; if (info.folderUrl) folderLink.href = info.folderUrl;
+      };
+      backupSwitch.addEventListener('change', function () {
+        backupSwitch.disabled = true;
+        call('apiSetDailyBackups', backupSwitch.checked).then(drawBackup).catch(function (error) { backupSwitch.checked = !backupSwitch.checked; backupSwitch.disabled = false; toast(errorMessage(error), true); });
+      });
+      nowButton.addEventListener('click', function () {
+        nowButton.disabled = true;
+        call('apiBackupNow').then(function (info) { nowButton.disabled = false; drawBackup(info); toast(t('backupDone')); }).catch(function (error) { nowButton.disabled = false; toast(errorMessage(error), true); });
+      });
+      append(backupCard, [backupNote, h('label', { class: 'switch' }, backupSwitch, backupState), lastLine, h('div', { class: 'button-row', style: 'margin-top:10px' }, nowButton, folderLink)]);
+      call('apiGetBackupStatus').then(drawBackup).catch(function (error) { backupState.textContent = errorMessage(error); });
+      grid.appendChild(backupCard);
+
+      // Owner: website / channel leads arrive automatically.
+      var intakeCard = h('div', { class: 'card' }, h('div', { class: 'card-title' }, icon('inbox'), t('intakeTitle')), h('p', { text: t('intakeNote') }));
+      var intakeSwitch = h('input', { type: 'checkbox', disabled: true });
+      var intakeState = h('span', { class: 'muted', text: t('loading') });
+      var intakeBody = h('div', { hidden: true, style: 'margin-top:10px' });
+      var drawIntake = function (info) {
+        intakeSwitch.disabled = false; intakeSwitch.checked = info.enabled;
+        intakeState.textContent = info.enabled ? t('intakeOn') : t('intakeOff');
+        clear(intakeBody); intakeBody.hidden = !info.enabled;
+        if (!info.enabled) return;
+        var linkBox = h('input', { class: 'input', readonly: 'readonly', dir: 'ltr', value: info.url, onclick: function () { linkBox.select(); } });
+        var copy = h('button', { class: 'btn small', type: 'button', onclick: function () {
+          var done = function () { toast(t('copied')); };
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(info.url).then(done, function () { linkBox.select(); });
+          else { linkBox.select(); try { document.execCommand('copy'); done(); } catch (e) { /* select is enough */ } }
+        } }, t('copyLink'));
+        var rotate = h('button', { class: 'btn small ghost', type: 'button', onclick: function () {
+          if (!window.confirm(t('intakeNewKeyConfirm'))) return;
+          call('apiSetLeadIntake', true).then(drawIntake).catch(function (error) { toast(errorMessage(error), true); });
+        } }, t('intakeNewKey'));
+        append(intakeBody, [h('div', { class: 'fact-label', text: t('intakeLink') }), linkBox, h('div', { class: 'faint', style: 'font-size:13px;margin:8px 0', text: t('intakeFields') }), h('div', { class: 'button-row' }, copy, rotate)]);
+      };
+      intakeSwitch.addEventListener('change', function () {
+        intakeSwitch.disabled = true;
+        call('apiSetLeadIntake', intakeSwitch.checked).then(drawIntake).catch(function (error) { intakeSwitch.checked = !intakeSwitch.checked; intakeSwitch.disabled = false; toast(errorMessage(error), true); });
+      });
+      append(intakeCard, [h('label', { class: 'switch' }, intakeSwitch, intakeState), intakeBody]);
+      call('apiGetIntakeStatus').then(drawIntake).catch(function (error) { intakeState.textContent = errorMessage(error); });
+      grid.appendChild(intakeCard);
     }
 
     var firmHolder = h('div', { class: 'card', style: 'grid-column:1/-1' }, h('div', { class: 'loading', text: t('loading') }));

@@ -10,6 +10,8 @@
  *   - lead access  -> the client it was converted into (and back)
  *   - consultations, follow-ups, transactions, documents -> through their
  *     linked lead/client/case (and follow-ups/consultations assigned to them)
+ *   - referrals -> through their case, their assignee/team (e.g. a junior
+ *     lawyer doing administrative work for a partner), or work they logged
  * Companies are a shared directory and stay visible to every role.
  *
  * When a restricted user creates a lead, client, or case they are added to its
@@ -30,7 +32,7 @@ function mpAccessScope_(actor) {
   if (MP_SCOPE_CACHE_[actor.userId]) return MP_SCOPE_CACHE_[actor.userId];
   const me = actor.userId;
   const scope = { userId: me, Leads: {}, Clients: {}, Cases: {}, Consultations: {} };
-  const team = { Leads: {}, Clients: {}, Cases: {} };
+  const team = { Leads: {}, Clients: {}, Cases: {}, Referrals: {} };
   mpActiveAssignments_().forEach(function(row) { if (row.UserID === me && team[row.EntityType]) team[row.EntityType][row.EntityID] = true; });
 
   const leads = mpRows_('Leads').records;
@@ -53,9 +55,14 @@ function mpAccessScope_(actor) {
   mpRows_('Consultations').records.forEach(function(item) {
     if (item.AssignedLawyer === me || scope.Leads[item.LeadID] || scope.Clients[item.ClientID]) scope.Consultations[item.ConsultationID] = true;
   });
-  // A referral (and its work items and payments) is visible with its case.
+  // A referral (and its work items and payments) is visible with its case, to the
+  // staff member assigned to it (or on its team), and to anyone who logged work on it.
   scope.Referrals = {};
-  mpRows_('Referrals').records.forEach(function(item) { if (scope.Cases[item.CaseID]) scope.Referrals[item.ReferralID] = true; });
+  const workedOn = {};
+  mpRows_('ReferralWork').records.forEach(function(item) { if (item.IsArchived !== true && item.DoneBy === me) workedOn[item.ReferralID] = true; });
+  mpRows_('Referrals').records.forEach(function(item) {
+    if (scope.Cases[item.CaseID] || item.AssignedTo === me || team.Referrals[item.ReferralID] || workedOn[item.ReferralID]) scope.Referrals[item.ReferralID] = true;
+  });
   MP_SCOPE_CACHE_[me] = scope;
   return scope;
 }
@@ -112,7 +119,7 @@ function mpAssertLinksInScope_(scope, entity, record) {
 }
 
 /** Main-assignee fields that decide access; restricted users cannot change them after creation. */
-const MP_ASSIGNEE_FIELDS = Object.freeze({ Leads: 'AssignedTo', Clients: 'AssignedTo', Cases: 'AssignedLawyer' });
+const MP_ASSIGNEE_FIELDS = Object.freeze({ Leads: 'AssignedTo', Clients: 'AssignedTo', Cases: 'AssignedLawyer', Referrals: 'AssignedTo' });
 
 function mpAssertAssigneeChangeAllowed_(actor, entity, input, existing) {
   const field = MP_ASSIGNEE_FIELDS[entity];
